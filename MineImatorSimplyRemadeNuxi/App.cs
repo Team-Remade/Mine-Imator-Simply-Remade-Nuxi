@@ -162,9 +162,13 @@ public class App : Game
 
         ImGui.DockSpaceOverViewport(ImGui.GetMainViewport());
         
-        ImGui.Begin("Test");
+        ImGui.Begin("Viewport");
+
+        var size = ImGui.GetContentRegionAvail();
         
-        ImGui.Image(textureHandle, new System.Numerics.Vector2(200, 200));
+        camera.UpdateProjectionMatrix(size.X / size.Y);
+        
+        ImGui.Image(textureHandle, size);
         
         ImGui.End();
         

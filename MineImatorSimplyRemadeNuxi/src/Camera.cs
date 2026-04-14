@@ -62,6 +62,12 @@ public class Camera
         effect.World = World;
     }
 
+    public void UpdateProjectionMatrix(float aspectRatio)
+    {
+        Projection = Matrix.CreatePerspectiveFieldOfView(
+            MathHelper.ToRadians(45), aspectRatio, 0.1f, 1000.0f);
+    }
+
     private void UpdateViewMatrix()
     {
         View = Matrix.CreateLookAt(_position, _position + Forward, Vector3.Up);
