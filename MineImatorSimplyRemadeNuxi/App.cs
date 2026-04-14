@@ -142,6 +142,7 @@ public class App : Game
         
         basicEffect.VertexColorEnabled = true;
         basicEffect.TextureEnabled = false;
+        camera.ApplyToEffect(basicEffect);
         foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
         {
             pass.Apply();
@@ -150,21 +151,9 @@ public class App : Game
         
         GraphicsDevice.SetRenderTarget(null);
         
-        camera.ApplyToEffect(basicEffect);
+        textureHandle = GuiRenderer.BindTexture(renderTarget);
         
         GraphicsDevice.Clear(Color.Black);
-        
-        GraphicsDevice.SetVertexBuffer(vertexBuffer);
-        GraphicsDevice.RasterizerState = rasterizerState;
-        
-        basicEffect.VertexColorEnabled = false;
-        basicEffect.TextureEnabled = true;
-        basicEffect.Texture = renderTarget;
-        foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
-        {
-            pass.Apply();
-            GraphicsDevice.DrawPrimitives(PrimitiveType.TriangleList, 0, 3);
-        }
 
         base.Draw(gameTime);
         
