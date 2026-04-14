@@ -1,3 +1,5 @@
+using System;
+using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -6,6 +8,9 @@ namespace MineImatorSimplyRemadeNuxi;
 
 public class App : Game
 {
+    [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern void SDL_MaximizeWindow(IntPtr window);
+    
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
     
@@ -43,6 +48,14 @@ public class App : Game
         
         vertexBuffer = new VertexBuffer(GraphicsDevice, typeof(VertexPositionColor), triangleVertices.Length, BufferUsage.WriteOnly);
         vertexBuffer.SetData(triangleVertices);
+        
+        Window.AllowUserResizing = true;
+        
+        _graphics.PreferredBackBufferWidth = 1920;
+        _graphics.PreferredBackBufferHeight = 1080;
+        _graphics.ApplyChanges();
+        
+        SDL_MaximizeWindow(Window.Handle);
 
         base.Initialize();
     }
