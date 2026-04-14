@@ -15,6 +15,9 @@ public class App : Game
     VertexPositionColor[] triangleVertices;
     VertexBuffer vertexBuffer;
 
+    private MouseState _lastMouseState;
+    private bool _isActive;
+
     public App()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -54,6 +57,37 @@ public class App : Game
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
             Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
+
+        MouseState currentMouse = Mouse.GetState();
+
+        if (currentMouse.RightButton == ButtonState.Pressed)
+        {
+            if (!_isActive)
+            {
+                _isActive = true;
+                IsMouseVisible = false;
+                Mouse.SetPosition(Window.ClientBounds.Width / 2, Window.ClientBounds.Height / 2);
+                _lastMouseState = Mouse.GetState();
+            }
+
+            MouseState currentCentered = Mouse.GetState();
+            int deltaX = currentCentered.X - _lastMouseState.X;
+            int deltaY = currentCentered.Y - _lastMouseState.Y;
+
+            camera.Update((float)gameTime.ElapsedGameTime.TotalSeconds, deltaX, deltaY, true);
+
+            Mouse.SetPosition(Window.ClientBounds.Width / 2, Window.ClientBounds.Height / 2);
+            _lastMouseState = Mouse.GetState();
+        }
+        else
+        {
+            if (_isActive)
+            {
+                _isActive = false;
+                IsMouseVisible = true;
+            }
+            camera.Update((float)gameTime.ElapsedGameTime.TotalSeconds, 0, 0, false);
+        }
 
         base.Update(gameTime);
     }
