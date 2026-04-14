@@ -1,8 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
+using ImGuiNET;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.ImGuiNet;
 
 namespace MineImatorSimplyRemadeNuxi;
 
@@ -13,6 +15,7 @@ public class App : Game
     
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
+    public static ImGuiRenderer GuiRenderer;
     
     Camera camera;
     
@@ -33,6 +36,8 @@ public class App : Game
     protected override void Initialize()
     {
         Window.Title = "Mine Imator Simply Remade: Nuxi";
+        
+        GuiRenderer = new ImGuiRenderer(this);
         
         camera = new Camera();
         camera.Initialize(GraphicsDevice);
@@ -65,6 +70,8 @@ public class App : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
+        
+        GuiRenderer.RebuildFontAtlas();
     }
 
     protected override void Update(GameTime gameTime)
@@ -121,5 +128,13 @@ public class App : Game
         }
 
         base.Draw(gameTime);
+        
+        GuiRenderer.BeginLayout(gameTime);
+
+        ImGui.Begin("Test");
+        
+        ImGui.End();
+        
+        GuiRenderer.EndLayout();
     }
 }
