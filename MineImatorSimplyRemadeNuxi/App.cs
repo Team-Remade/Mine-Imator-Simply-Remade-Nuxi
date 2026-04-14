@@ -20,8 +20,13 @@ public class App : Game
     Camera camera;
     
     BasicEffect basicEffect;
-    VertexPositionColor[] triangleVertices;
+    VertexPositionTexture[] triangleVertices;
+    VertexPositionColor[] coloredTriangleVertices;
     VertexBuffer vertexBuffer;
+    VertexBuffer coloredVertexBuffer;
+    RenderTarget2D renderTarget;
+    Texture2D whiteTexture;
+    IntPtr textureHandle;
 
     private MouseState _lastMouseState;
     private bool _isActive;
@@ -43,18 +48,32 @@ public class App : Game
         camera.Initialize(GraphicsDevice);
         
         basicEffect = new BasicEffect(GraphicsDevice);
-        basicEffect.VertexColorEnabled = true;
-        basicEffect.LightingEnabled = false;
+        basicEffect.TextureEnabled = true;
 
         triangleVertices =
+        [
+            new VertexPositionTexture(new Vector3(0, 20, 0), new Vector2(0.5f, 0)),
+            new VertexPositionTexture(new Vector3(-20, -20, 0), new Vector2(0, 1)),
+            new VertexPositionTexture(new Vector3(20, -20, 0), new Vector2(1, 1))
+        ];
+        
+        vertexBuffer = new VertexBuffer(GraphicsDevice, typeof(VertexPositionTexture), triangleVertices.Length, BufferUsage.WriteOnly);
+        vertexBuffer.SetData(triangleVertices);
+        
+        renderTarget = new RenderTarget2D(GraphicsDevice, 512, 512);
+        whiteTexture = new Texture2D(GraphicsDevice, 1, 1);
+        whiteTexture.SetData([Color.White]);
+        basicEffect.Texture = whiteTexture;
+        
+        coloredTriangleVertices =
         [
             new VertexPositionColor(new Vector3(0, 20, 0), Color.Red),
             new VertexPositionColor(new Vector3(-20, -20, 0), Color.Green),
             new VertexPositionColor(new Vector3(20, -20, 0), Color.Blue)
         ];
         
-        vertexBuffer = new VertexBuffer(GraphicsDevice, typeof(VertexPositionColor), triangleVertices.Length, BufferUsage.WriteOnly);
-        vertexBuffer.SetData(triangleVertices);
+        coloredVertexBuffer = new VertexBuffer(GraphicsDevice, typeof(VertexPositionColor), coloredTriangleVertices.Length, BufferUsage.WriteOnly);
+        coloredVertexBuffer.SetData(coloredTriangleVertices);
         
         Window.AllowUserResizing = true;
         
@@ -72,6 +91,8 @@ public class App : Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         
         GuiRenderer.RebuildFontAtlas();
+        
+        textureHandle = GuiRenderer.BindTexture(renderTarget);
     }
 
     protected override void Update(GameTime gameTime)
@@ -112,15 +133,33 @@ public class App : Game
 
     protected override void Draw(GameTime gameTime)
     {
+        RasterizerState rasterizerState = new RasterizerState();
+        
+        GraphicsDevice.SetRenderTarget(renderTarget);
+        GraphicsDevice.Clear(Color.Black);
+        GraphicsDevice.SetVertexBuffer(coloredVertexBuffer);
+        GraphicsDevice.RasterizerState = rasterizerState;
+        
+        basicEffect.VertexColorEnabled = true;
+        basicEffect.TextureEnabled = false;
+        foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+        {
+            pass.Apply();
+            GraphicsDevice.DrawPrimitives(PrimitiveType.TriangleList, 0, 3);
+        }
+        
+        GraphicsDevice.SetRenderTarget(null);
+        
         camera.ApplyToEffect(basicEffect);
         
         GraphicsDevice.Clear(Color.Black);
         
         GraphicsDevice.SetVertexBuffer(vertexBuffer);
-
-        RasterizerState rasterizerState = new RasterizerState();
         GraphicsDevice.RasterizerState = rasterizerState;
-
+        
+        basicEffect.VertexColorEnabled = false;
+        basicEffect.TextureEnabled = true;
+        basicEffect.Texture = renderTarget;
         foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
         {
             pass.Apply();
@@ -132,6 +171,8 @@ public class App : Game
         GuiRenderer.BeginLayout(gameTime);
 
         ImGui.Begin("Test");
+        
+        ImGui.Image(textureHandle, new System.Numerics.Vector2(200, 200));
         
         ImGui.End();
         
