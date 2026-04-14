@@ -32,6 +32,8 @@ public class App : Game
 
     protected override void Initialize()
     {
+        Window.Title = "Mine Imator Simply Remade: Nuxi";
+        
         camera = new Camera();
         camera.Initialize(GraphicsDevice);
         
