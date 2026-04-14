@@ -1,15 +1,21 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 namespace MineImatorSimplyRemadeNuxi;
 
-public class Game1 : Game
+public class App : Game
 {
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
+    
+    Camera camera;
+    
+    BasicEffect basicEffect;
+    VertexPositionColor[] triangleVertices;
+    VertexBuffer vertexBuffer;
 
-    public Game1()
+    public App()
     {
         _graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
@@ -18,7 +24,22 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        // TODO: Add your initialization logic here
+        camera = new Camera();
+        camera.Initialize(GraphicsDevice);
+        
+        basicEffect = new BasicEffect(GraphicsDevice);
+        basicEffect.VertexColorEnabled = true;
+        basicEffect.LightingEnabled = false;
+
+        triangleVertices =
+        [
+            new VertexPositionColor(new Vector3(0, 20, 0), Color.Red),
+            new VertexPositionColor(new Vector3(-20, -20, 0), Color.Green),
+            new VertexPositionColor(new Vector3(20, -20, 0), Color.Blue)
+        ];
+        
+        vertexBuffer = new VertexBuffer(GraphicsDevice, typeof(VertexPositionColor), triangleVertices.Length, BufferUsage.WriteOnly);
+        vertexBuffer.SetData(triangleVertices);
 
         base.Initialize();
     }
@@ -26,8 +47,6 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-
-        // TODO: use this.Content to load your game content here
     }
 
     protected override void Update(GameTime gameTime)
@@ -36,16 +55,26 @@ public class Game1 : Game
             Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
 
-        // TODO: Add your update logic here
-
         base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)
     {
+        camera.ApplyToEffect(basicEffect);
+        
         GraphicsDevice.Clear(Color.CornflowerBlue);
+        
+        GraphicsDevice.SetVertexBuffer(vertexBuffer);
 
-        // TODO: Add your drawing code here
+        RasterizerState rasterizerState = new RasterizerState();
+        rasterizerState.CullMode = CullMode.None;
+        GraphicsDevice.RasterizerState = rasterizerState;
+
+        foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+        {
+            pass.Apply();
+            GraphicsDevice.DrawPrimitives(PrimitiveType.TriangleList, 0, 3);
+        }
 
         base.Draw(gameTime);
     }

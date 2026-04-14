@@ -1,2 +1,2 @@
-﻿using var game = new MineImatorSimplyRemadeNuxi.Game1();
+﻿using var game = new MineImatorSimplyRemadeNuxi.App();
 game.Run();
