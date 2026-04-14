@@ -43,6 +43,7 @@ public class App : Game
         Window.Title = "Mine Imator Simply Remade: Nuxi";
         
         GuiRenderer = new ImGuiRenderer(this);
+        ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
         
         camera = new Camera();
         camera.Initialize(GraphicsDevice);
@@ -159,6 +160,8 @@ public class App : Game
         
         GuiRenderer.BeginLayout(gameTime);
 
+        ImGui.DockSpaceOverViewport(ImGui.GetMainViewport());
+        
         ImGui.Begin("Test");
         
         ImGui.Image(textureHandle, new System.Numerics.Vector2(200, 200));
