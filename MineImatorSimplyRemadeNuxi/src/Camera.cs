@@ -40,9 +40,9 @@ public class Camera
 
     public Camera()
     {
-        _position = new Vector3(0, 0, 50);
+        _position = new Vector3(0, 0, -50);
         _pitch = 0;
-        _yaw = 0;
+        _yaw = MathHelper.Pi;
     }
 
     public void Initialize(GraphicsDevice graphicsDevice)

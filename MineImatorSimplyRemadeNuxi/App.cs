@@ -107,12 +107,11 @@ public class App : Game
     {
         camera.ApplyToEffect(basicEffect);
         
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        GraphicsDevice.Clear(Color.Black);
         
         GraphicsDevice.SetVertexBuffer(vertexBuffer);
 
         RasterizerState rasterizerState = new RasterizerState();
-        rasterizerState.CullMode = CullMode.None;
         GraphicsDevice.RasterizerState = rasterizerState;
 
         foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
