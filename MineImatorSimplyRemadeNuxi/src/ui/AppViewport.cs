@@ -2,10 +2,11 @@
 using ImGuiNET;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace MineImatorSimplyRemadeNuxi.ui;
 
-public class Viewport
+public class AppViewport
 {
     public Camera camera;
     GraphicsDevice graphicsDevice;
@@ -16,7 +17,10 @@ public class Viewport
     VertexPositionColor[] coloredTriangleVertices;
     VertexBuffer coloredVertexBuffer;
     
-    public Viewport(Camera camera, GraphicsDevice graphicsDevice)
+    private MouseState _lastMouseState;
+    private bool _isActive;
+    
+    public AppViewport(Camera camera, GraphicsDevice graphicsDevice)
     {
         this.camera = camera;
         this.graphicsDevice = graphicsDevice;
@@ -41,6 +45,40 @@ public class Viewport
         basicEffect.Texture = whiteTexture;
         
         textureHandle = App.GuiRenderer.BindTexture(renderTarget);
+    }
+
+    public void Update(GameTime gameTime)
+    {
+        MouseState currentMouse = Mouse.GetState();
+
+        if (currentMouse.RightButton == ButtonState.Pressed)
+        {
+            if (!_isActive)
+            {
+                _isActive = true;
+                Program.App.IsMouseVisible = false;
+                Mouse.SetPosition(Program.App.Window.ClientBounds.Width / 2, Program.App.Window.ClientBounds.Height / 2);
+                _lastMouseState = Mouse.GetState();
+            }
+
+            MouseState currentCentered = Mouse.GetState();
+            int deltaX = currentCentered.X - _lastMouseState.X;
+            int deltaY = currentCentered.Y - _lastMouseState.Y;
+
+            camera.Update((float)gameTime.ElapsedGameTime.TotalSeconds, deltaX, deltaY, true);
+
+            Mouse.SetPosition(Program.App.Window.ClientBounds.Width / 2, Program.App.Window.ClientBounds.Height / 2);
+            _lastMouseState = Mouse.GetState();
+        }
+        else
+        {
+            if (_isActive)
+            {
+                _isActive = false;
+                Program.App.IsMouseVisible = true;
+            }
+            camera.Update((float)gameTime.ElapsedGameTime.TotalSeconds, 0, 0, false);
+        }
     }
     
     public void Render()
