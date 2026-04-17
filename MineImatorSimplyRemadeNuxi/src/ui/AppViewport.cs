@@ -19,6 +19,8 @@ public class AppViewport
     
     private MouseState _lastMouseState;
     private bool _isActive;
+    private Vector2 _imageMin;
+    private Vector2 _imageMax;
     
     public AppViewport(Camera camera, GraphicsDevice graphicsDevice)
     {
@@ -47,11 +49,18 @@ public class AppViewport
         textureHandle = App.GuiRenderer.BindTexture(renderTarget);
     }
 
+    private bool IsMouseOverImage()
+    {
+        Vector2 mousePos = new Vector2(Mouse.GetState().X, Mouse.GetState().Y);
+        return mousePos.X >= _imageMin.X && mousePos.X <= _imageMax.X &&
+               mousePos.Y >= _imageMin.Y && mousePos.Y <= _imageMax.Y;
+    }
+
     public void Update(GameTime gameTime)
     {
         MouseState currentMouse = Mouse.GetState();
 
-        if (currentMouse.RightButton == ButtonState.Pressed)
+        if (currentMouse.RightButton == ButtonState.Pressed && IsMouseOverImage())
         {
             if (!_isActive)
             {
@@ -78,6 +87,12 @@ public class AppViewport
                 Program.App.IsMouseVisible = true;
             }
             camera.Update((float)gameTime.ElapsedGameTime.TotalSeconds, 0, 0, false);
+        }
+        
+        if (_isActive && !IsMouseOverImage() && currentMouse.RightButton == ButtonState.Released)
+        {
+            _isActive = false;
+            Program.App.IsMouseVisible = true;
         }
     }
     
@@ -116,6 +131,8 @@ public class AppViewport
         camera.UpdateProjectionMatrix(size.X / size.Y);
         
         ImGui.Image(textureHandle, size);
+        _imageMin = ImGui.GetItemRectMin();
+        _imageMax = ImGui.GetItemRectMax();
         
         ImGui.End();
     }
