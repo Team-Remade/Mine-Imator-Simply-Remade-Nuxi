@@ -106,6 +106,12 @@ public class AppViewport
         ImGui.Begin("Viewport");
 
         var size = ImGui.GetContentRegionAvail();
+
+        if ((renderTarget.Width != (int)MathF.Floor(size.X) || renderTarget.Height != (int)MathF.Floor(size.Y)) && size.X > 0 && size.Y > 0)
+        {
+            renderTarget.Dispose();
+            renderTarget = new RenderTarget2D(graphicsDevice, (int)size.X, (int)size.Y);
+        }
         
         camera.UpdateProjectionMatrix(size.X / size.Y);
         
