@@ -31,4 +31,16 @@
         <PackageReference Include="MonoGame.Library.SDL" Version="2.32.10.2" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.5-beta1" />
     </ItemGroup>
+    <Target Name="CopyDataFolder" AfterTargets="Build">
+        <ItemGroup>
+            <DataFiles Include="data\**\*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(OutputPath)data\%(RecursiveDir)" />
+    </Target>
+    <Target Name="CopyDataFolderPublish" AfterTargets="Publish">
+        <ItemGroup>
+            <DataFiles Include="data\**\*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(PublishDir)data\%(RecursiveDir)" />
+    </Target>
 </Project>
