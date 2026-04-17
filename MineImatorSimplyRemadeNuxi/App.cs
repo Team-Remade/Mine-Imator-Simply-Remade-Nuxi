@@ -11,6 +11,15 @@ namespace MineImatorSimplyRemadeNuxi;
 public class App : Game
 {
     [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void SDL_SetWindowIcon(IntPtr window, IntPtr icon);
+
+    [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr SDL_CreateRGBSurfaceFrom(IntPtr pixels, int width, int height, int depth, int pitch, uint rmask, uint gmask, uint bmask, uint amask);
+
+    [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void SDL_FreeSurface(IntPtr surface);
+
+    [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern void SDL_MaximizeWindow(IntPtr window);
     
     private GraphicsDeviceManager _graphics;
@@ -39,13 +48,19 @@ public class App : Game
         
         Window.AllowUserResizing = true;
         
-        _graphics.PreferredBackBufferWidth = 1920;
-        _graphics.PreferredBackBufferHeight = 1080;
+        _graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width - 200;
+        _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height - 200;
         _graphics.ApplyChanges();
         
-        SDL_MaximizeWindow(Window.Handle);
+        // SDL_MaximizeWindow(Window.Handle);
         
         _viewport = new AppViewport(camera, GraphicsDevice);
+
+        if (new Random().Next(1000) == 777)
+        {
+            Texture2D texture = Content.Load<Texture2D>("assets/img/chegg");
+            WindowIconEasterEgg(texture);
+        }
 
         base.Initialize();
     }
@@ -77,5 +92,30 @@ public class App : Game
         _viewport.Render();
         
         GuiRenderer.EndLayout();
+    }
+
+    private void WindowIconEasterEgg(Texture2D texture)
+    {
+        var pixels = new byte[texture.Width * texture.Height * 4];
+        texture.GetData(pixels);
+
+        bool isLittleEndian = BitConverter.IsLittleEndian;
+        uint rmask = isLittleEndian ? 0x000000FFu : 0xFF000000u;
+        uint gmask = isLittleEndian ? 0x0000FF00u : 0x00FF0000u;
+        uint bmask = isLittleEndian ? 0x00FF0000u : 0x0000FF00u;
+        uint amask = isLittleEndian ? 0xFF000000u : 0x000000FFu;
+
+        unsafe
+        {
+            fixed (byte* ptr = pixels)
+            {
+                IntPtr surface = SDL_CreateRGBSurfaceFrom((IntPtr)ptr, texture.Width, texture.Height, 32, texture.Width * 4, rmask, gmask, bmask, amask);
+                if (surface != IntPtr.Zero)
+                {
+                    SDL_SetWindowIcon(Window.Handle, surface);
+                    SDL_FreeSurface(surface);
+                }
+            }
+        }
     }
 }
