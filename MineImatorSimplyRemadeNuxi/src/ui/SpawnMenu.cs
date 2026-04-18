@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
+using MineImatorSimplyRemadeNuxi.core.mdl;
 using MineImatorSimplyRemadeNuxi.core.objs;
 
 namespace MineImatorSimplyRemadeNuxi.ui;
@@ -354,9 +355,15 @@ public class SpawnMenu
             PivotOffset = new Vector3(0, -0.5f, 0)
         };
 
-        // TODO: create mesh geometry and attach Visual when the mesh/rendering
-        //       pipeline supports it.
+        // Create mesh geometry for supported primitive types
+        if (primitiveType == "Plane")
+        {
+            var graphicsDevice = Program.App.GraphicsDevice;
+            // 1 metre × 1 metre vertical (XY) plane
+            sceneObject.Visual = new MineImatorSimplyRemadeNuxi.core.mdl.Plane(1f, 1f, PlaneOrientation.XY, graphicsDevice);
+        }
 
+        Viewport.SceneObjects.Add(sceneObject);
         return sceneObject;
     }
 

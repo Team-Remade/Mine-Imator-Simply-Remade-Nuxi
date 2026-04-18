@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -30,6 +31,9 @@ public class AppViewport
 
     /// <summary>Set by App after both objects are created.</summary>
     public SpawnMenu SpawnMenu { get; set; }
+
+    /// <summary>All scene objects currently in the viewport.</summary>
+    public List<SceneObject> SceneObjects { get; } = new();
     
     public AppViewport(WorkCamera camera, GraphicsDevice graphicsDevice)
     {
@@ -42,7 +46,8 @@ public class AppViewport
         xzPlane = new core.mdl.Plane(64f, 64f, PlaneOrientation.XZ, graphicsDevice);
         coloredVertexBuffer = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), 0, BufferUsage.WriteOnly);
         
-        renderTarget = new RenderTarget2D(graphicsDevice, 512, 512);
+        renderTarget = new RenderTarget2D(graphicsDevice, 512, 512,
+            false, SurfaceFormat.Color, DepthFormat.Depth24);
         
         whiteTexture = new Texture2D(graphicsDevice, 1, 1);
         whiteTexture.SetData([Color.White]);
@@ -113,7 +118,7 @@ public class AppViewport
 
     public SceneObject[] GetChildren()
     {
-        return [];
+        return SceneObjects.ToArray();
     }
 
     public Node GetNodeOrNull<t>(string id)
@@ -134,7 +139,8 @@ public class AppViewport
         if ((renderTarget.Width != (int)MathF.Floor(size.X) || renderTarget.Height != (int)MathF.Floor(size.Y)) && size.X > 0 && size.Y > 0)
         {
             renderTarget.Dispose();
-            renderTarget = new RenderTarget2D(graphicsDevice, (int)size.X, (int)size.Y);
+            renderTarget = new RenderTarget2D(graphicsDevice, (int)size.X, (int)size.Y,
+                false, SurfaceFormat.Color, DepthFormat.Depth24);
             textureHandle = App.GuiRenderer.BindTexture(renderTarget);
         }
 
@@ -142,8 +148,9 @@ public class AppViewport
             camera.UpdateProjectionMatrix(45, size.X / size.Y);
 
         graphicsDevice.SetRenderTarget(renderTarget);
-        graphicsDevice.Clear(bgColor);
+        graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, bgColor.ToVector4(), 1f, 0);
         graphicsDevice.RasterizerState = rasterizerState;
+        graphicsDevice.DepthStencilState = DepthStencilState.Default;
         graphicsDevice.SamplerStates[0] = new SamplerState
         {
             Filter = TextureFilter.Point,
@@ -152,6 +159,27 @@ public class AppViewport
         };
         camera.ApplyToEffect(basicEffect);
         xzPlane.Render(graphicsDevice, basicEffect);
+
+        // Render spawned scene objects
+        var savedTexture = basicEffect.Texture;
+        basicEffect.Texture = whiteTexture;
+        foreach (var obj in SceneObjects)
+        {
+            if (obj.Visual is Mesh mesh)
+            {
+                // Pivot offset shifts the mesh in local space before rotation/translation.
+                // A negative pivot value moves the mesh in the positive direction, so the
+                // mesh is offset by -PivotOffset, then rotated, then moved to Position.
+                var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
+                basicEffect.World =
+                    Matrix.CreateTranslation(-obj.PivotOffset) *
+                    rotation *
+                    Matrix.CreateTranslation(obj.Position);
+                mesh.Render(graphicsDevice, basicEffect);
+            }
+        }
+        basicEffect.World = Matrix.Identity;
+        basicEffect.Texture = savedTexture;
         
         graphicsDevice.SetRenderTarget(null);
         

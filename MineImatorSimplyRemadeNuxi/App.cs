@@ -95,6 +95,7 @@ public class App : Game
         _timeline = new Timeline();
         _spawnMenu = new SpawnMenu();
         Viewport.SpawnMenu = _spawnMenu;
+        _spawnMenu.Viewport = Viewport;
 
         TerrainAtlas.Initialize(GraphicsDevice);
         ItemsAtlas.Initialize(GraphicsDevice);
