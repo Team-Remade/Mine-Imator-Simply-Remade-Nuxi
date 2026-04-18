@@ -107,8 +107,6 @@ public class AppViewport
     {
         return [];
     }
-    
-    
 
     public Node GetNodeOrNull<t>(string id)
     {
