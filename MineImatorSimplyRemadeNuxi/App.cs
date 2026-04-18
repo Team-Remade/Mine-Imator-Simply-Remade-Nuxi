@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using Microsoft.Xna.Framework;
@@ -25,6 +26,8 @@ public class App : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
     public static ImGuiRenderer GuiRenderer;
+    private static readonly string LocalPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    private static readonly string ApplicationLocalDirectory = "SimplyRemadeNuxi";
     
     Camera camera;
     AppViewport _viewport;
@@ -39,6 +42,11 @@ public class App : Game
     protected override void Initialize()
     {
         Window.Title = "Mine Imator Simply Remade: Nuxi";
+        
+        if (!Directory.Exists(GetUserDataPath()))
+        {
+            Directory.CreateDirectory(GetUserDataPath());
+        }
         
         GuiRenderer = new ImGuiRenderer(this);
         ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
@@ -59,7 +67,12 @@ public class App : Game
         if (new Random().Next(1000) == 777)
         {
             Texture2D texture = Content.Load<Texture2D>("assets/img/chegg");
-            WindowIconEasterEgg(texture);
+            SetWindowIcon(texture);
+        }
+        else
+        {
+            Texture2D texture = Content.Load<Texture2D>("assets/img/tamari");
+            SetWindowIcon(texture);
         }
 
         base.Initialize();
@@ -94,7 +107,7 @@ public class App : Game
         GuiRenderer.EndLayout();
     }
 
-    private void WindowIconEasterEgg(Texture2D texture)
+    private void SetWindowIcon(Texture2D texture)
     {
         var pixels = new byte[texture.Width * texture.Height * 4];
         texture.GetData(pixels);
@@ -117,5 +130,10 @@ public class App : Game
                 }
             }
         }
+    }
+    
+    public static string GetUserDataPath()
+    {
+        return Path.Combine(LocalPath, ApplicationLocalDirectory);
     }
 }
