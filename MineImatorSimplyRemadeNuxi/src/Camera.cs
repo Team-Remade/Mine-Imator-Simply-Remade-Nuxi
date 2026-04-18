@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -9,6 +10,8 @@ public class Camera
     private Vector3 _position;
     private float _pitch;
     private float _yaw;
+    private float _baseSpeed = 20;
+    private float _speedMultiplier = 1;
 
     public Vector3 Position
     {
@@ -40,9 +43,18 @@ public class Camera
 
     public Camera()
     {
-        _position = new Vector3(0, 0, -50);
-        _pitch = 0;
-        _yaw = MathHelper.Pi;
+        Reset();
+    }
+
+    private void Reset()
+    {
+        _position = new Vector3(4.005625f, 3.64125f, 4.005625f);
+
+        // Orient toward the initial look-at target (0, 1, 0)
+        var initialTarget = new Vector3(0f, 1f, 0f);
+        var dir = Vector3.Normalize(initialTarget - _position);
+        _pitch = (float)Math.Asin(dir.Y);
+        _yaw   = (float)Math.Atan2(-dir.X, -dir.Z);
     }
 
     public void Initialize(GraphicsDevice graphicsDevice)
@@ -62,10 +74,10 @@ public class Camera
         effect.World = World;
     }
 
-    public void UpdateProjectionMatrix(float aspectRatio)
+    public void UpdateProjectionMatrix(float fov, float aspectRatio)
     {
         Projection = Matrix.CreatePerspectiveFieldOfView(
-            MathHelper.ToRadians(45), aspectRatio, 0.1f, 1000.0f);
+            MathHelper.ToRadians(fov), aspectRatio, 0.1f, 1000.0f);
     }
 
     private void UpdateViewMatrix()
@@ -78,15 +90,15 @@ public class Camera
     public void MoveBackward(float distance) => Position += Backward * distance;
     public void MoveLeft(float distance) => Position += Left * distance;
     public void MoveRight(float distance) => Position += Right * distance;
-    public void MoveUp(float distance) => Position += Up * distance;
-    public void MoveDown(float distance) => Position += Down * distance;
+    public void MoveUp(float distance) => Position += Vector3.Up * distance;
+    public void MoveDown(float distance) => Position += Vector3.Down * distance;
 
     public void LookLeft(float radians) => Yaw -= radians;
     public void LookRight(float radians) => Yaw += radians;
     public void LookUp(float radians) => Pitch -= radians;
     public void LookDown(float radians) => Pitch += radians;
 
-    public void Update(float deltaTime, int deltaX, int deltaY, bool isActive)
+    public void Update(float deltaTime, int deltaX, int deltaY, int deltaWheel, bool isActive)
     {
         if (isActive)
         {
@@ -94,15 +106,20 @@ public class Camera
             Yaw -= deltaX * sensitivity;
             Pitch -= deltaY * sensitivity;
             Pitch = MathHelper.Clamp(Pitch, -MathHelper.PiOver2 + 0.01f, MathHelper.PiOver2 - 0.01f);
-        }
 
-        float speed = 100f * deltaTime;
-        var keyboard = Keyboard.GetState();
-        if (keyboard.IsKeyDown(Keys.W)) MoveForward(speed);
-        if (keyboard.IsKeyDown(Keys.S)) MoveBackward(speed);
-        if (keyboard.IsKeyDown(Keys.A)) MoveLeft(speed);
-        if (keyboard.IsKeyDown(Keys.D)) MoveRight(speed);
-        if (keyboard.IsKeyDown(Keys.Space)) MoveUp(speed);
-        if (keyboard.IsKeyDown(Keys.LeftShift)) MoveDown(speed);
+            _speedMultiplier = MathHelper.Clamp(_speedMultiplier + deltaWheel * 0.001f, 0.01f, 5f);
+
+            float speed = _baseSpeed * deltaTime * _speedMultiplier;
+            var keyboard = Keyboard.GetState();
+            if (keyboard.IsKeyDown(Keys.LeftShift)) speed *= 0.5f;
+            if (keyboard.IsKeyDown(Keys.Space)) speed *= 2;
+            if (keyboard.IsKeyDown(Keys.W)) MoveForward(speed);
+            if (keyboard.IsKeyDown(Keys.S)) MoveBackward(speed);
+            if (keyboard.IsKeyDown(Keys.A)) MoveLeft(speed);
+            if (keyboard.IsKeyDown(Keys.D)) MoveRight(speed);
+            if (keyboard.IsKeyDown(Keys.E)) MoveUp(speed);
+            if (keyboard.IsKeyDown(Keys.Q)) MoveDown(speed);
+            if (keyboard.IsKeyDown(Keys.R)) Reset();
+        }
     }
 }
