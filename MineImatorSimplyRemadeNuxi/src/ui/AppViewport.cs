@@ -1,5 +1,5 @@
 ﻿using System;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -12,7 +12,7 @@ public class AppViewport
     GraphicsDevice graphicsDevice;
     BasicEffect basicEffect;
     RenderTarget2D renderTarget;
-    IntPtr textureHandle;
+    ImTextureRef textureHandle;
     Texture2D whiteTexture;
     VertexPositionColor[] coloredTriangleVertices;
     VertexBuffer coloredVertexBuffer;

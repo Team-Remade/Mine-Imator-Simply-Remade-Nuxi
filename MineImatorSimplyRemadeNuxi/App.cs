@@ -1,11 +1,11 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MineImatorSimplyRemadeNuxi.Gui;
 using MineImatorSimplyRemadeNuxi.ui;
-using MonoGame.ImGuiNet;
 
 namespace MineImatorSimplyRemadeNuxi;
 
@@ -28,10 +28,21 @@ public class App : Game
     public static ImGuiRenderer GuiRenderer;
     private static readonly string LocalPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     private static readonly string ApplicationLocalDirectory = "SimplyRemadeNuxi";
+    private static readonly string ImGuiIniPath = "imgui.ini";
     
     Camera camera;
     AppViewport _viewport;
     MenuBar _menuBar;
+    SceneTree _sceneTree;
+    PropertiesPanel _properties;
+    Timeline _timeline;
+    
+    public const string ViewportDockId = "Viewport";
+    public const string SceneTreeDockId = "Scene Tree";
+    public const string PropertiesDockId = "Properties";
+    public const string TimelineDockId = "Timeline";
+    
+    private bool _dockSpaceInitialized = false;
 
     public App()
     {
@@ -65,6 +76,9 @@ public class App : Game
         
         _viewport = new AppViewport(camera, GraphicsDevice);
         _menuBar = new MenuBar();
+        _sceneTree = new SceneTree();
+        _properties = new PropertiesPanel();
+        _timeline = new Timeline();
 
         if (new Random().Next(1000) == 777)
         {
@@ -83,8 +97,6 @@ public class App : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        
-        GuiRenderer.RebuildFontAtlas();
     }
 
     protected override void Update(GameTime gameTime)
@@ -100,14 +112,46 @@ public class App : Game
 
         base.Draw(gameTime);
         
-        GuiRenderer.BeginLayout(gameTime);
-
-        ImGui.DockSpaceOverViewport(ImGui.GetMainViewport());
+        GuiRenderer.BeforeLayout(gameTime);
 
         _menuBar.Render();
+
+        ImGuiViewportPtr mainViewport = ImGui.GetMainViewport();
+        ImGui.SetNextWindowPos(mainViewport.WorkPos);
+        ImGui.SetNextWindowSize(mainViewport.WorkSize);
+        ImGui.SetNextWindowViewport(mainViewport.ID);
+
+        ImGuiWindowFlags dockWindowFlags =
+            ImGuiWindowFlags.NoDocking |
+            ImGuiWindowFlags.NoTitleBar |
+            ImGuiWindowFlags.NoCollapse |
+            ImGuiWindowFlags.NoResize |
+            ImGuiWindowFlags.NoMove |
+            ImGuiWindowFlags.NoBringToFrontOnFocus |
+            ImGuiWindowFlags.NoBackground;
+
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0.0f);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.0f);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, System.Numerics.Vector2.Zero);
+        ImGui.Begin("##DockSpaceWindow", dockWindowFlags);
+        ImGui.PopStyleVar(3);
+
+        uint dockspaceId = ImGui.GetID("##MainDockSpace");
+        ImGui.DockSpace(dockspaceId, System.Numerics.Vector2.Zero, ImGuiDockNodeFlags.PassthruCentralNode);
+
+        if (!_dockSpaceInitialized && !File.Exists(ImGuiIniPath))
+        {
+            SetupDefaultDockSpace(dockspaceId, mainViewport.WorkSize);
+            _dockSpaceInitialized = true;
+        }
+
+        ImGui.End();
         _viewport.Render();
+        _sceneTree.Render();
+        _properties.Render();
+        _timeline.Render();
         
-        GuiRenderer.EndLayout();
+        GuiRenderer.AfterLayout();
     }
 
     private void SetWindowIcon(Texture2D texture)
@@ -138,5 +182,31 @@ public class App : Game
     public static string GetUserDataPath()
     {
         return Path.Combine(LocalPath, ApplicationLocalDirectory);
+    }
+    
+    private unsafe void SetupDefaultDockSpace(uint dockspaceId, System.Numerics.Vector2 size)
+    {
+        ImGuiP.DockBuilderRemoveNode(dockspaceId);
+        ImGuiP.DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags.None);
+        ImGuiP.DockBuilderSetNodeSize(dockspaceId, size);
+        
+        // Split root into left (viewport+timeline) and right (scene tree+properties)
+        uint rightId = 0;
+        uint leftId = ImGuiP.DockBuilderSplitNode(dockspaceId, ImGuiDir.Left, 0.70f, null, &rightId);
+
+        // Split left column: top = viewport, bottom = timeline
+        uint timelineDockId = 0;
+        uint viewportDockId = ImGuiP.DockBuilderSplitNode(leftId, ImGuiDir.Up, 0.75f, null, &timelineDockId);
+
+        // Split right column: top = scene tree, bottom = properties
+        uint propertiesDockId = 0;
+        uint sceneTreeDockId = ImGuiP.DockBuilderSplitNode(rightId, ImGuiDir.Up, 0.30f, null, &propertiesDockId);
+
+        ImGuiP.DockBuilderDockWindow(ViewportDockId, viewportDockId);
+        ImGuiP.DockBuilderDockWindow(TimelineDockId, timelineDockId);
+        ImGuiP.DockBuilderDockWindow(SceneTreeDockId, sceneTreeDockId);
+        ImGuiP.DockBuilderDockWindow(PropertiesDockId, propertiesDockId);
+        
+        ImGuiP.DockBuilderFinish(dockspaceId);
     }
 }

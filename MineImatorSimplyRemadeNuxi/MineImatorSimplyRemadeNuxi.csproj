@@ -12,8 +12,8 @@
         <ApplicationIcon>Icon.ico</ApplicationIcon>
     </PropertyGroup>
     <ItemGroup>
-        <None Remove="Icon.ico"/>
-        <None Remove="Icon.bmp"/>
+        <None Remove="Icon.ico" />
+        <None Remove="Icon.bmp" />
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="Icon.ico">
@@ -24,10 +24,10 @@
         </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Jarodwr.MonoGameImGuiNet" Version="1.0.0" />
+        <PackageReference Include="Hexa.NET.ImGui" Version="2.2.9" />
         <PackageReference Include="MonoGame.Extended" Version="5.5.1" />
-        <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*"/>
-        <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*"/>
+        <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
+        <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
         <PackageReference Include="MonoGame.Library.SDL" Version="2.32.10.2" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.5-beta1" />
     </ItemGroup>
