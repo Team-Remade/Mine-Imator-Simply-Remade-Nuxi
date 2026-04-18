@@ -34,7 +34,7 @@ public class App : Game
     AppViewport _viewport;
     MenuBar _menuBar;
     SceneTree _sceneTree;
-    PropertiesPanel _properties;
+    public PropertiesPanel Properties;
     Timeline _timeline;
     
     public const string ViewportDockId = "Viewport";
@@ -77,7 +77,7 @@ public class App : Game
         _viewport = new AppViewport(camera, GraphicsDevice);
         _menuBar = new MenuBar();
         _sceneTree = new SceneTree();
-        _properties = new PropertiesPanel();
+        Properties = new PropertiesPanel();
         _timeline = new Timeline();
 
         if (new Random().Next(1000) == 777)
@@ -148,7 +148,7 @@ public class App : Game
         ImGui.End();
         _viewport.Render();
         _sceneTree.Render();
-        _properties.Render();
+        Properties.Render();
         _timeline.Render();
         
         GuiRenderer.AfterLayout();

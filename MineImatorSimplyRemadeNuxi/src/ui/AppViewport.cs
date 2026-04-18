@@ -100,8 +100,10 @@ public class AppViewport
     {
         RasterizerState rasterizerState = new RasterizerState();
         
+        Color bgColor = new Color(Program.App.Properties.BackgroundColor[0], Program.App.Properties.BackgroundColor[1], Program.App.Properties.BackgroundColor[2]);
+        
         graphicsDevice.SetRenderTarget(renderTarget);
-        graphicsDevice.Clear(Color.Black);
+        graphicsDevice.Clear(bgColor);
         graphicsDevice.SetVertexBuffer(coloredVertexBuffer);
         graphicsDevice.RasterizerState = rasterizerState;
         
