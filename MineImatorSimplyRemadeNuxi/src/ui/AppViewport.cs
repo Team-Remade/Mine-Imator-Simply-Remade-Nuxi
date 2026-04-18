@@ -27,6 +27,9 @@ public class AppViewport
     private bool _isActive;
     private Vector2 _imageMin;
     private Vector2 _imageMax;
+
+    /// <summary>Set by App after both objects are created.</summary>
+    public SpawnMenu SpawnMenu { get; set; }
     
     public AppViewport(WorkCamera camera, GraphicsDevice graphicsDevice)
     {
@@ -162,8 +165,16 @@ public class AppViewport
         ImGui.PushStyleColor(ImGuiCol.Button, new System.Numerics.Vector4(0, 0, 0, 0));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new System.Numerics.Vector4(0, 0, 0, 0));
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, new System.Numerics.Vector4(0, 0, 0, 0));
-        ImGui.ImageButton("##benchBtn", _benchTextureHandle, new System.Numerics.Vector2(64, 64));
+        bool benchClicked = ImGui.ImageButton("##benchBtn", _benchTextureHandle, new System.Numerics.Vector2(64, 64));
         ImGui.PopStyleColor(3);
+
+        if (benchClicked && SpawnMenu != null)
+        {
+            // Position the spawn menu just to the right of the button
+            var btnMax = ImGui.GetItemRectMax();
+            var btnMin = ImGui.GetItemRectMin();
+            SpawnMenu.Toggle(new System.Numerics.Vector2(btnMin.X, btnMax.Y + 4f));
+        }
         
         ImGui.End();
     }

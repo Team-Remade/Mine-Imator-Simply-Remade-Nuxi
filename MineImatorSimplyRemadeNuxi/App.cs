@@ -40,6 +40,7 @@ public class App : Game
     SceneTree _sceneTree;
     public PropertiesPanel Properties;
     Timeline _timeline;
+    private SpawnMenu _spawnMenu;
     
     // Performance optimization
     private int _fpsUpdateCounter = 0;
@@ -92,6 +93,8 @@ public class App : Game
         _sceneTree = new SceneTree();
         Properties = new PropertiesPanel();
         _timeline = new Timeline();
+        _spawnMenu = new SpawnMenu();
+        Viewport.SpawnMenu = _spawnMenu;
 
         TerrainAtlas.Initialize(GraphicsDevice);
         ItemsAtlas.Initialize(GraphicsDevice);
@@ -173,6 +176,7 @@ public class App : Game
         _sceneTree.Render();
         Properties.Render();
         _timeline.Render();
+        _spawnMenu.Render();
         
         GuiRenderer.AfterLayout();
     }
