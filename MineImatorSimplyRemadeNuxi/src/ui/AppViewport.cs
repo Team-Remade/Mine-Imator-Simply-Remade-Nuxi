@@ -17,6 +17,8 @@ public class AppViewport
     RenderTarget2D renderTarget;
     ImTextureRef textureHandle;
     Texture2D whiteTexture;
+    Texture2D _benchTexture;
+    ImTextureRef _benchTextureHandle;
     core.mdl.Plane xzPlane;
     VertexBuffer coloredVertexBuffer;
     
@@ -44,6 +46,9 @@ public class AppViewport
         basicEffect.Texture = whiteTexture;
         
         textureHandle = App.GuiRenderer.BindTexture(renderTarget);
+        
+        _benchTexture = Program.App.Content.Load<Texture2D>("assets/img/bench");
+        _benchTextureHandle = App.GuiRenderer.BindTexture(_benchTexture);
     }
 
     public void LoadTerrainTexture()
@@ -150,6 +155,15 @@ public class AppViewport
         ImGui.Image(textureHandle, size);
         _imageMin = ImGui.GetItemRectMin();
         _imageMax = ImGui.GetItemRectMax();
+        
+        // Texture button overlaid at the top-left corner of the viewport image
+        float padding = 8f;
+        ImGui.SetCursorPos(new System.Numerics.Vector2(padding, ImGui.GetFrameHeight() + padding));
+        ImGui.PushStyleColor(ImGuiCol.Button, new System.Numerics.Vector4(0, 0, 0, 0));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new System.Numerics.Vector4(0, 0, 0, 0));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new System.Numerics.Vector4(0, 0, 0, 0));
+        ImGui.ImageButton("##benchBtn", _benchTextureHandle, new System.Numerics.Vector2(64, 64));
+        ImGui.PopStyleColor(3);
         
         ImGui.End();
     }
