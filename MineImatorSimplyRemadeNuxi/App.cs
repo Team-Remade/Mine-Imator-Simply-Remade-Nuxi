@@ -31,6 +31,7 @@ public class App : Game
     
     Camera camera;
     AppViewport _viewport;
+    MenuBar _menuBar;
 
     public App()
     {
@@ -57,12 +58,13 @@ public class App : Game
         Window.AllowUserResizing = true;
         
         _graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width - 200;
-        _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height - 200;
+        _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height - 160;
         _graphics.ApplyChanges();
         
         // SDL_MaximizeWindow(Window.Handle);
         
         _viewport = new AppViewport(camera, GraphicsDevice);
+        _menuBar = new MenuBar();
 
         if (new Random().Next(1000) == 777)
         {
@@ -101,7 +103,8 @@ public class App : Game
         GuiRenderer.BeginLayout(gameTime);
 
         ImGui.DockSpaceOverViewport(ImGui.GetMainViewport());
-        
+
+        _menuBar.Render();
         _viewport.Render();
         
         GuiRenderer.EndLayout();
