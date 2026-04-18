@@ -22,7 +22,7 @@ public static class ItemsAtlas
 
     private static void LoadAtlas()
     {
-        string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string basePath = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
         string itemsPath = Path.Combine(basePath, "data", "minecraft", "versions", "1.3.2", "gui", "items.png");
 
         if (!File.Exists(itemsPath))

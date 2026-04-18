@@ -23,7 +23,7 @@ public static class TerrainAtlas
 
     private static void LoadAtlas()
     {
-        string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string basePath = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
         string terrainPath = Path.Combine(basePath, "data", "minecraft", "versions", "1.3.2", "terrain.png");
 
         if (!File.Exists(terrainPath))

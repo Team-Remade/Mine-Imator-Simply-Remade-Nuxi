@@ -42,10 +42,10 @@
         </ItemGroup>
         <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(OutputPath)data\%(RecursiveDir)" />
     </Target>
-    <Target Name="CopyDataFolderPublish" AfterTargets="Publish">
+    <Target Name="CopyDataFolderPublish" AfterTargets="_CopyResolvedFilesToPublishAlways;_CopyResolvedFilesToPublishPreserveNewest">
         <ItemGroup>
-            <DataFiles Include="data\**\*" />
+            <DataFiles Include="$(MSBuildProjectDirectory)\data\**\*" />
         </ItemGroup>
-        <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(PublishDir)data\%(RecursiveDir)" />
+        <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(PublishDir)data\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
 </Project>
