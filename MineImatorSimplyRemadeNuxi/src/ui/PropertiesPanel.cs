@@ -1,11 +1,36 @@
 using System;
 using Hexa.NET.ImGui;
+using MineImatorSimplyRemadeNuxi.core.objs;
 
 namespace MineImatorSimplyRemadeNuxi.ui;
 
 public class PropertiesPanel
 {
+    public Node Floor;
+    
     public float[] BackgroundColor = [0.5764706f, 0.5764706f, 1f, 1f];
+
+    public int GetResolutionWidth()
+    {
+        return 0;
+    }
+
+    public int GetResolutionHeight()
+    {
+        return 0;
+    }
+
+    public int GetFramerate()
+    {
+        return 0;
+    }
+
+    public int TextureAnimationFps = 0;
+    
+    public string BackgroundImagePath = "";
+    
+    public bool StretchBackground = true;
+    
 
     public void Render()
     {

@@ -54,14 +54,30 @@ public class Plane : Mesh
             };
         }
 
-        Vertices = new VertexPositionColor[]
+        Vector2 uv0, uv1, uv2, uv3;
+        if (Orientation == PlaneOrientation.XY)
         {
-            new VertexPositionColor(positions[0], Color),
-            new VertexPositionColor(positions[1], Color),
-            new VertexPositionColor(positions[2], Color),
-            new VertexPositionColor(positions[0], Color),
-            new VertexPositionColor(positions[2], Color),
-            new VertexPositionColor(positions[3], Color)
+            uv0 = new Vector2(Width, Height);
+            uv1 = new Vector2(Width, 0);
+            uv2 = new Vector2(0, 0);
+            uv3 = new Vector2(0, Height);
+        }
+        else
+        {
+            uv0 = new Vector2(Width, Height);
+            uv1 = new Vector2(Width, 0);
+            uv2 = new Vector2(0, 0);
+            uv3 = new Vector2(0, Height);
+        }
+
+        Vertices = new VertexPositionColorTexture[]
+        {
+            new VertexPositionColorTexture(positions[0], Color, uv0),
+            new VertexPositionColorTexture(positions[1], Color, uv1),
+            new VertexPositionColorTexture(positions[2], Color, uv2),
+            new VertexPositionColorTexture(positions[0], Color, uv0),
+            new VertexPositionColorTexture(positions[2], Color, uv2),
+            new VertexPositionColorTexture(positions[3], Color, uv3)
         };
     }
 

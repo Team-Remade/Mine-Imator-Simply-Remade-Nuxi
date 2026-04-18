@@ -1,9 +1,13 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using FFMpegCore;
+using FFMpegCore.Extensions.Downloader;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MineImatorSimplyRemadeNuxi.core.objs.nodes;
 using MineImatorSimplyRemadeNuxi.Gui;
 using MineImatorSimplyRemadeNuxi.ui;
 
@@ -30,12 +34,21 @@ public class App : Game
     private static readonly string ApplicationLocalDirectory = "SimplyRemadeNuxi";
     private static readonly string ImGuiIniPath = "imgui.ini";
     
-    Camera camera;
-    AppViewport _viewport;
+    WorkCamera camera;
+    public AppViewport Viewport;
     MenuBar _menuBar;
     SceneTree _sceneTree;
     public PropertiesPanel Properties;
     Timeline _timeline;
+    
+    // Performance optimization
+    private int _fpsUpdateCounter = 0;
+    private const int FPS_UPDATE_INTERVAL = 10; // Update FPS every 10 frames
+    
+    private bool _renderModeEnabled = false;
+    
+    // Debug toggle: set to true to skip the asset downloader on startup
+    private const bool DebugSkipAssetDownloader = true;
     
     public const string ViewportDockId = "Viewport";
     public const string SceneTreeDockId = "Scene Tree";
@@ -51,7 +64,7 @@ public class App : Game
         IsMouseVisible = true;
     }
 
-    protected override void Initialize()
+    protected override async void Initialize()
     {
         Window.Title = "Mine Imator Simply Remade: Nuxi";
         
@@ -63,7 +76,7 @@ public class App : Game
         GuiRenderer = new ImGuiRenderer(this);
         ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
         
-        camera = new Camera();
+        camera = new WorkCamera();
         camera.Initialize(GraphicsDevice);
         
         Window.AllowUserResizing = true;
@@ -74,11 +87,16 @@ public class App : Game
         
         // SDL_MaximizeWindow(Window.Handle);
         
-        _viewport = new AppViewport(camera, GraphicsDevice);
+        Viewport = new AppViewport(camera, GraphicsDevice);
         _menuBar = new MenuBar();
         _sceneTree = new SceneTree();
         Properties = new PropertiesPanel();
         _timeline = new Timeline();
+
+        TerrainAtlas.Initialize(GraphicsDevice);
+        ItemsAtlas.Initialize(GraphicsDevice);
+
+        Viewport.LoadTerrainTexture();
 
         if (new Random().Next(1000) == 777)
         {
@@ -91,6 +109,11 @@ public class App : Game
             SetWindowIcon(texture);
         }
 
+        await EnsureFFMpegAsync();
+
+        if (!DebugSkipAssetDownloader)
+            await ShowAssetDownloaderAndWait();
+
         base.Initialize();
     }
 
@@ -101,7 +124,7 @@ public class App : Game
 
     protected override void Update(GameTime gameTime)
     {
-        _viewport.Update(gameTime);
+        Viewport.Update(gameTime);
 
         base.Update(gameTime);
     }
@@ -146,7 +169,7 @@ public class App : Game
         }
 
         ImGui.End();
-        _viewport.Render();
+        Viewport.Render();
         _sceneTree.Render();
         Properties.Render();
         _timeline.Render();
@@ -208,5 +231,52 @@ public class App : Game
         ImGuiP.DockBuilderDockWindow(PropertiesDockId, propertiesDockId);
         
         ImGuiP.DockBuilderFinish(dockspaceId);
+    }
+
+    private async Task EnsureFFMpegAsync()
+    {
+        try
+        {
+            var ffmpegPath = Path.Combine(GetUserDataPath(), "ffmpeg");
+            Directory.CreateDirectory(ffmpegPath);
+            GlobalFFOptions.Configure(options => options.BinaryFolder = ffmpegPath);
+
+            bool ffmpegAvailable = false;
+            try
+            {
+                var process = new System.Diagnostics.Process();
+                process.StartInfo.FileName = GlobalFFOptions.GetFFMpegBinaryPath();
+                process.StartInfo.Arguments = "-version";
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.CreateNoWindow = true;
+                process.Start();
+                process.WaitForExit();
+                ffmpegAvailable = process.ExitCode == 0;
+            }
+            catch
+            {
+                ffmpegAvailable = false;
+            }
+
+            if (!ffmpegAvailable)
+            {
+                // Show loading UI while downloading FFmpeg
+                //ShowFFmpegLoadingWindow("Downloading FFmpeg binaries...");
+                Console.WriteLine("Downloading FFMpeg binaries...");
+                await FFMpegDownloader.DownloadBinaries();
+                //CloseFFmpegLoadingWindow();
+            }
+        }
+        catch (Exception ex)
+        {
+            //CloseFFmpegLoadingWindow();
+            Console.WriteLine($"Failed to ensure FFMpeg: {ex.Message}");
+        }
+    }
+
+    private async Task ShowAssetDownloaderAndWait()
+    {
+        // TODO:
     }
 }

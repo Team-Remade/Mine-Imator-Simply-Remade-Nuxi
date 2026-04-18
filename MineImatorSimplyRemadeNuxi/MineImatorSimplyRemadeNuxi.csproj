@@ -24,12 +24,17 @@
         </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="FFMPEGCore-Fork" Version="1.0.0" />
+        <PackageReference Include="FFMpegCore.Extensions.Downloader" Version="5.0.0" />
         <PackageReference Include="Hexa.NET.ImGui" Version="2.2.9" />
         <PackageReference Include="MonoGame.Extended" Version="5.5.1" />
         <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
         <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
         <PackageReference Include="MonoGame.Library.SDL" Version="2.32.10.2" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.5-beta1" />
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="src\core\project\" />
     </ItemGroup>
     <Target Name="CopyDataFolder" AfterTargets="Build">
         <ItemGroup>

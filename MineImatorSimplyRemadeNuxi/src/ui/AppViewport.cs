@@ -4,12 +4,14 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MineImatorSimplyRemadeNuxi.core.mdl;
+using MineImatorSimplyRemadeNuxi.core.objs;
+using MineImatorSimplyRemadeNuxi.core.objs.nodes;
 
 namespace MineImatorSimplyRemadeNuxi.ui;
 
 public class AppViewport
 {
-    public Camera camera;
+    public WorkCamera camera;
     GraphicsDevice graphicsDevice;
     BasicEffect basicEffect;
     RenderTarget2D renderTarget;
@@ -24,7 +26,7 @@ public class AppViewport
     private Vector2 _imageMin;
     private Vector2 _imageMax;
     
-    public AppViewport(Camera camera, GraphicsDevice graphicsDevice)
+    public AppViewport(WorkCamera camera, GraphicsDevice graphicsDevice)
     {
         this.camera = camera;
         this.graphicsDevice = graphicsDevice;
@@ -42,6 +44,14 @@ public class AppViewport
         basicEffect.Texture = whiteTexture;
         
         textureHandle = App.GuiRenderer.BindTexture(renderTarget);
+    }
+
+    public void LoadTerrainTexture()
+    {
+        if (TerrainAtlas.Textures.TryGetValue("8,2", out var terrainTexture))
+        {
+            basicEffect.Texture = terrainTexture;
+        }
     }
 
     private bool IsMouseOverImage()
@@ -92,6 +102,18 @@ public class AppViewport
             Program.App.IsMouseVisible = true;
         }
     }
+
+    public SceneObject[] GetChildren()
+    {
+        return [];
+    }
+    
+    
+
+    public Node GetNodeOrNull<t>(string id)
+    {
+        return null;
+    }
     
     public void Render()
     {
@@ -116,6 +138,12 @@ public class AppViewport
         graphicsDevice.SetRenderTarget(renderTarget);
         graphicsDevice.Clear(bgColor);
         graphicsDevice.RasterizerState = rasterizerState;
+        graphicsDevice.SamplerStates[0] = new SamplerState
+        {
+            Filter = TextureFilter.Point,
+            AddressU = TextureAddressMode.Wrap,
+            AddressV = TextureAddressMode.Wrap
+        };
         camera.ApplyToEffect(basicEffect);
         xzPlane.Render(graphicsDevice, basicEffect);
         

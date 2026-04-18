@@ -3,31 +3,13 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-namespace MineImatorSimplyRemadeNuxi;
+namespace MineImatorSimplyRemadeNuxi.core.objs.nodes;
 
-public class Camera
+public class WorkCamera : Node
 {
-    private Vector3 _position;
-    private float _pitch;
-    private float _yaw;
     private float _baseSpeed = 20;
     private float _speedMultiplier = 1;
-
-    public Vector3 Position
-    {
-        get => _position;
-        set { _position = value; UpdateViewMatrix(); }
-    }
-    public float Pitch
-    {
-        get => _pitch;
-        set { _pitch = value; UpdateViewMatrix(); }
-    }
-    public float Yaw
-    {
-        get => _yaw;
-        set { _yaw = value; UpdateViewMatrix(); }
-    }
+    
     public Matrix Projection { get; private set; }
     public Matrix View { get; private set; }
     public Matrix World { get; private set; }
@@ -39,22 +21,22 @@ public class Camera
     public Vector3 Up => Vector3.Transform(Vector3.Up, RotationMatrix);
     public Vector3 Down => Vector3.Transform(Vector3.Down, RotationMatrix);
 
-    public Matrix RotationMatrix => Matrix.CreateFromYawPitchRoll(_yaw, _pitch, 0);
+    public Matrix RotationMatrix => Matrix.CreateFromYawPitchRoll(Yaw, Pitch,0);
 
-    public Camera()
+    public WorkCamera()
     {
         Reset();
     }
 
     private void Reset()
     {
-        _position = new Vector3(4.005625f, 3.64125f, 4.005625f);
+        Position = new Vector3(4.005625f, 3.64125f, 4.005625f);
 
         // Orient toward the initial look-at target (0, 1, 0)
         var initialTarget = new Vector3(0f, 1f, 0f);
-        var dir = Vector3.Normalize(initialTarget - _position);
-        _pitch = (float)Math.Asin(dir.Y);
-        _yaw   = (float)Math.Atan2(-dir.X, -dir.Z);
+        var dir = Vector3.Normalize(initialTarget - Position);
+        Pitch = (float)Math.Asin(dir.Y);
+        Yaw = (float)Math.Atan2(-dir.X, -dir.Z);
     }
 
     public void Initialize(GraphicsDevice graphicsDevice)
@@ -82,7 +64,7 @@ public class Camera
 
     private void UpdateViewMatrix()
     {
-        View = Matrix.CreateLookAt(_position, _position + Forward, Vector3.Up);
+        View = Matrix.CreateLookAt(Position, Position + Forward, Vector3.Up);
         World = Matrix.Identity;
     }
 
@@ -121,5 +103,10 @@ public class Camera
             if (keyboard.IsKeyDown(Keys.Q)) MoveDown(speed);
             if (keyboard.IsKeyDown(Keys.R)) Reset();
         }
+    }
+
+    public override void PositionUpdated()
+    {
+        UpdateViewMatrix();
     }
 }
