@@ -385,6 +385,7 @@ public class SpawnMenu
             SpawnCategory = "Camera",
             Position = Vector3.Zero
         };
+        cameraObject.AssignObjectId();
 
         Viewport.SceneObjects.Add(cameraObject);
         return cameraObject;
@@ -402,6 +403,7 @@ public class SpawnMenu
             SpawnCategory = "Light",
             Position = Vector3.Zero
         };
+        lightObject.AssignObjectId();
 
         Viewport.SceneObjects.Add(lightObject);
         return lightObject;
@@ -420,6 +422,7 @@ public class SpawnMenu
             Position = Vector3.Zero,
             PivotOffset = new Vector3(0, -0.5f, 0)
         };
+        sceneObject.AssignObjectId();
 
         // Create mesh geometry for supported primitive types
         if (primitiveType == "Plane")

@@ -41,6 +41,32 @@ public class SceneObject
     public bool IsSelected;
     public bool IsSelectable = true;
 
+    // ── Colour picking ───────────────────────────────────────────────────────
+    /// <summary>Unique integer pick ID (1-based; 0 means "no object").</summary>
+    public int PickColorId { get; private set; }
+
+    /// <summary>
+    /// RGB colour encoding of <see cref="PickColorId"/>, in 0-1 range.
+    /// R = (id &gt;&gt; 0) &amp; 0xFF, G = (id &gt;&gt; 8) &amp; 0xFF, B = (id &gt;&gt; 16) &amp; 0xFF,
+    /// all divided by 255.
+    /// </summary>
+    public Vector3 PickColor { get; private set; }
+
+    /// <summary>
+    /// Assigns ObjectId and the pick-colour pair from SelectionManager.
+    /// Call once after the object is constructed (before it enters any scene).
+    /// </summary>
+    public void AssignObjectId()
+    {
+        var (uuid, pickColorId) = SelectionManager.Instance.GetNextObjectId();
+        ObjectId    = uuid;
+        PickColorId = pickColorId;
+        PickColor   = new Vector3(
+            ((pickColorId >>  0) & 0xFF) / 255f,
+            ((pickColorId >>  8) & 0xFF) / 255f,
+            ((pickColorId >> 16) & 0xFF) / 255f);
+    }
+
     // ── Hierarchy ────────────────────────────────────────────────────────────
     /// <summary>Direct child SceneObjects (not the viewport root).</summary>
     private readonly List<SceneObject> _children = new();

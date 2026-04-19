@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
@@ -17,6 +17,8 @@ public class AppViewport
     GraphicsDevice graphicsDevice;
     BasicEffect basicEffect;
     RenderTarget2D renderTarget;
+    RenderTarget2D _pickTarget;
+    Effect _pickEffect;
     ImTextureRef textureHandle;
     Texture2D whiteTexture;
     Texture2D _benchTexture;
@@ -25,10 +27,16 @@ public class AppViewport
     VertexBuffer coloredVertexBuffer;
     
     private MouseState _lastMouseState;
+    private MouseState _prevFrameMouse;    // mouse state at end of previous frame
     private int _lastScrollWheelValue;
-    private bool _isActive;
+    private bool _isActive;               // true while right-button fly mode is active
     private Vector2 _imageMin;
     private Vector2 _imageMax;
+
+    // ── Orbit drag state ──────────────────────────────────────────────────────
+    private bool _orbitDragging;          // left-drag orbit is active
+    private Vector2 _orbitClickPos;       // screen pos where left button was pressed
+    private const float OrbitDeadzone = 5f;
 
     /// <summary>Set by App after both objects are created.</summary>
     public SpawnMenu SpawnMenu { get; set; }
@@ -71,13 +79,18 @@ public class AppViewport
         
         renderTarget = new RenderTarget2D(graphicsDevice, 512, 512,
             false, SurfaceFormat.Color, DepthFormat.Depth24);
+        _pickTarget = new RenderTarget2D(graphicsDevice, 512, 512,
+            false, SurfaceFormat.Color, DepthFormat.Depth24);
         
         whiteTexture = new Texture2D(graphicsDevice, 1, 1);
         whiteTexture.SetData([Color.White]);
         basicEffect.Texture = whiteTexture;
         
         textureHandle = App.GuiRenderer.BindTexture(renderTarget);
-        
+
+        // Load the pick shader compiled by the content pipeline
+        _pickEffect = Program.App.Content.Load<Effect>("assets/shaders/PickShader");
+
         _benchTexture = Program.App.Content.Load<Texture2D>("assets/img/bench");
         _benchTextureHandle = App.GuiRenderer.BindTexture(_benchTexture);
     }
@@ -101,6 +114,7 @@ public class AppViewport
     {
         MouseState currentMouse = Mouse.GetState();
 
+        // ── Right-button fly mode ─────────────────────────────────────────────
         if (currentMouse.RightButton == ButtonState.Pressed && IsMouseOverImage())
         {
             if (!_isActive)
@@ -137,6 +151,58 @@ public class AppViewport
             _isActive = false;
             Program.App.IsMouseVisible = true;
         }
+
+        // ── Left-button orbit drag (only when NOT in fly mode) ────────────────
+        if (!_isActive && IsMouseOverImage())
+        {
+            // Left button pressed this frame → record click position
+            if (currentMouse.LeftButton == ButtonState.Pressed &&
+                _prevFrameMouse.LeftButton == ButtonState.Released)
+            {
+                _orbitClickPos  = new Vector2(currentMouse.X, currentMouse.Y);
+                _orbitDragging  = false;
+            }
+
+            // Left button held → check for drag
+            if (currentMouse.LeftButton == ButtonState.Pressed &&
+                _prevFrameMouse.LeftButton == ButtonState.Pressed)
+            {
+                var delta = new Vector2(currentMouse.X - _prevFrameMouse.X,
+                                        currentMouse.Y - _prevFrameMouse.Y);
+                var clickDelta = new Vector2(currentMouse.X - _orbitClickPos.X,
+                                             currentMouse.Y - _orbitClickPos.Y);
+
+                if (!_orbitDragging && clickDelta.Length() > OrbitDeadzone)
+                    _orbitDragging = true;
+
+                if (_orbitDragging)
+                    camera.OrbitBy(delta.X, delta.Y);
+            }
+
+            // Left button released this frame → if no drag happened, do pick
+            if (currentMouse.LeftButton == ButtonState.Released &&
+                _prevFrameMouse.LeftButton == ButtonState.Pressed &&
+                !_orbitDragging)
+            {
+                PerformPickAtMouse(_prevFrameMouse.X, _prevFrameMouse.Y);
+            }
+
+            if (currentMouse.LeftButton == ButtonState.Released)
+                _orbitDragging = false;
+
+            // Scroll wheel zoom (orbit) when not flying
+            int scrollDelta = currentMouse.ScrollWheelValue - _prevFrameMouse.ScrollWheelValue;
+            if (scrollDelta != 0)
+                camera.OrbitZoom(scrollDelta / 120f); // 120 units = one notch
+        }
+        else if (!_isActive)
+        {
+            // Mouse is not over the viewport and not flying — reset drag state
+            if (currentMouse.LeftButton == ButtonState.Released)
+                _orbitDragging = false;
+        }
+
+        _prevFrameMouse = currentMouse;
     }
 
     public SceneObject[] GetChildren()
@@ -148,7 +214,132 @@ public class AppViewport
     {
         return null;
     }
-    
+
+    // ── Colour-pick pass ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Renders the ID-colour pick pass into <see cref="_pickTarget"/> and reads
+    /// back the pixel at the given screen-space position to determine which
+    /// object was clicked.
+    /// </summary>
+    private void PerformPickAtMouse(int screenX, int screenY)
+    {
+        if (_pickTarget == null || _pickEffect == null) return;
+
+        // ── Render pick pass ──────────────────────────────────────────────────
+        graphicsDevice.SetRenderTarget(_pickTarget);
+        graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer,
+            new Vector4(0, 0, 0, 0), 1f, 0);
+
+        // Apply camera matrices to the pick shader
+        _pickEffect.Parameters["View"]?.SetValue(camera.View);
+        _pickEffect.Parameters["Projection"]?.SetValue(camera.Projection);
+
+        graphicsDevice.RasterizerState   = RasterizerState.CullNone;
+        graphicsDevice.DepthStencilState = DepthStencilState.Default;
+
+        RenderPickObjects(SceneObjects);
+
+        graphicsDevice.SetRenderTarget(null);
+
+        // ── Map screen pos → render-target pixel ──────────────────────────────
+        float rtW = _pickTarget.Width;
+        float rtH = _pickTarget.Height;
+        float imgW = _imageMax.X - _imageMin.X;
+        float imgH = _imageMax.Y - _imageMin.Y;
+
+        if (imgW <= 0 || imgH <= 0) return;
+
+        int pixelX = (int)((screenX - _imageMin.X) / imgW * rtW);
+        int pixelY = (int)((screenY - _imageMin.Y) / imgH * rtH);
+
+        pixelX = MathHelper.Clamp(pixelX, 0, _pickTarget.Width  - 1);
+        pixelY = MathHelper.Clamp(pixelY, 0, _pickTarget.Height - 1);
+
+        // Read back single pixel
+        Color[] pixels = new Color[_pickTarget.Width * _pickTarget.Height];
+        _pickTarget.GetData(pixels);
+        Color hit = pixels[pixelY * _pickTarget.Width + pixelX];
+
+        // ── Decode colour → pick ID ────────────────────────────────────────────
+        int pickId = hit.R | (hit.G << 8) | (hit.B << 16);
+
+        // ── Dispatch to SelectionManager ──────────────────────────────────────
+        bool ctrlHeld = Keyboard.GetState().IsKeyDown(Keys.LeftControl) ||
+                        Keyboard.GetState().IsKeyDown(Keys.RightControl);
+
+        if (hit.A < 5) // alpha ≈ 0 → empty space
+        {
+            if (!ctrlHeld)
+                SelectionManager.Instance?.ClearSelection();
+            return;
+        }
+
+        SceneObject hitObj = FindObjectByPickId(SceneObjects, pickId);
+        if (hitObj == null)
+        {
+            if (!ctrlHeld)
+                SelectionManager.Instance?.ClearSelection();
+            return;
+        }
+
+        if (ctrlHeld)
+        {
+            SelectionManager.Instance?.ToggleSelection(hitObj);
+        }
+        else
+        {
+            SelectionManager.Instance?.ClearSelection();
+            SelectionManager.Instance?.SelectObject(hitObj);
+        }
+        SceneTree?.Refresh();
+    }
+
+    /// <summary>Renders all selectable objects with their pick colour using <see cref="_pickEffect"/>.</summary>
+    private void RenderPickObjects(IEnumerable<SceneObject> objects)
+    {
+        foreach (var obj in objects)
+        {
+            if (obj.IsSelectable && obj.Visual is Mesh mesh)
+            {
+                // Build the same world transform as the normal render pass
+                var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
+                var world =
+                    Matrix.CreateTranslation(-obj.PivotOffset) *
+                    rotation *
+                    Matrix.CreateTranslation(obj.Position);
+
+                _pickEffect.Parameters["World"]?.SetValue(world);
+                _pickEffect.Parameters["pick_color"]?.SetValue(obj.PickColor);
+
+                // Use the generic Effect overload on Mesh (no VertexBuffer access needed)
+                mesh.Render(graphicsDevice, _pickEffect);
+            }
+
+            // Recurse into children
+            if (obj.Children.Count > 0)
+                RenderPickObjects(obj.Children);
+        }
+    }
+
+    /// <summary>
+    /// Recursively walks <paramref name="objects"/> and returns the first
+    /// <see cref="SceneObject"/> whose <see cref="SceneObject.PickColorId"/> matches
+    /// <paramref name="pickId"/>, or <c>null</c> if none is found.
+    /// </summary>
+    private static SceneObject FindObjectByPickId(IEnumerable<SceneObject> objects, int pickId)
+    {
+        foreach (var obj in objects)
+        {
+            if (obj.PickColorId == pickId) return obj;
+            var found = FindObjectByPickId(obj.Children, pickId);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    // ── Main render ───────────────────────────────────────────────────────────
+
     public void Render()
     {
         RasterizerState rasterizerState = new RasterizerState();
@@ -159,12 +350,17 @@ public class AppViewport
 
         var size = ImGui.GetContentRegionAvail();
 
+        // Resize render targets if viewport size changes
         if ((renderTarget.Width != (int)MathF.Floor(size.X) || renderTarget.Height != (int)MathF.Floor(size.Y)) && size.X > 0 && size.Y > 0)
         {
             renderTarget.Dispose();
             renderTarget = new RenderTarget2D(graphicsDevice, (int)size.X, (int)size.Y,
                 false, SurfaceFormat.Color, DepthFormat.Depth24);
             textureHandle = App.GuiRenderer.BindTexture(renderTarget);
+
+            _pickTarget?.Dispose();
+            _pickTarget = new RenderTarget2D(graphicsDevice, (int)size.X, (int)size.Y,
+                false, SurfaceFormat.Color, DepthFormat.Depth24);
         }
 
         if (size.X > 0 && size.Y > 0)
@@ -190,9 +386,6 @@ public class AppViewport
         {
             if (obj.Visual is Mesh mesh)
             {
-                // Pivot offset shifts the mesh in local space before rotation/translation.
-                // A negative pivot value moves the mesh in the positive direction, so the
-                // mesh is offset by -PivotOffset, then rotated, then moved to Position.
                 var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
                 basicEffect.World =
                     Matrix.CreateTranslation(-obj.PivotOffset) *
@@ -221,7 +414,6 @@ public class AppViewport
 
         if (benchClicked && SpawnMenu != null)
         {
-            // Position the spawn menu just to the right of the button
             var btnMax = ImGui.GetItemRectMax();
             var btnMin = ImGui.GetItemRectMin();
             SpawnMenu.Toggle(new System.Numerics.Vector2(btnMin.X, btnMax.Y + 4f));

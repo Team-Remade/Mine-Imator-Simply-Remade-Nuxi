@@ -45,6 +45,24 @@ public abstract class Mesh
             graphicsDevice.DrawPrimitives(PrimitiveType.TriangleList, 0, Vertices.Length / 3);
         }
     }
+
+    /// <summary>
+    /// Renders the mesh using an arbitrary <see cref="Effect"/> (e.g. the pick shader).
+    /// The caller is responsible for setting all effect parameters before calling this.
+    /// </summary>
+    public void Render(GraphicsDevice graphicsDevice, Effect effect)
+    {
+        if (VertexBuffer == null) return;
+
+        graphicsDevice.SetVertexBuffer(VertexBuffer);
+        graphicsDevice.RasterizerState = new RasterizerState { CullMode = CullMode };
+
+        foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+        {
+            pass.Apply();
+            graphicsDevice.DrawPrimitives(PrimitiveType.TriangleList, 0, Vertices.Length / 3);
+        }
+    }
     
     public int GetSurfaceCount()
     {

@@ -49,3 +49,9 @@
 /processorParam:TextureFormat=Color
 /build:assets/img/tamari.png
 
+#begin assets/shaders/PickShader.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:assets/shaders/PickShader.fx
+

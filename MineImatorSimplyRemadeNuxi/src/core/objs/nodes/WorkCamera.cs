@@ -21,7 +21,13 @@ public class WorkCamera : Node
     public Vector3 Up => Vector3.Transform(Vector3.Up, RotationMatrix);
     public Vector3 Down => Vector3.Transform(Vector3.Down, RotationMatrix);
 
-    public Matrix RotationMatrix => Matrix.CreateFromYawPitchRoll(Yaw, Pitch,0);
+    public Matrix RotationMatrix => Matrix.CreateFromYawPitchRoll(Yaw, Pitch, 0);
+
+    // ── Orbit state ──────────────────────────────────────────────────────────
+    public Vector3 OrbitTarget   { get; private set; } = Vector3.Zero;
+    public float   OrbitDistance { get; private set; } = 6.93f;
+    public float   OrbitYaw      { get; private set; }
+    public float   OrbitPitch    { get; private set; }
 
     public WorkCamera()
     {
@@ -37,6 +43,15 @@ public class WorkCamera : Node
         var dir = Vector3.Normalize(initialTarget - Position);
         Pitch = (float)Math.Asin(dir.Y);
         Yaw = (float)Math.Atan2(-dir.X, -dir.Z);
+
+        // Initialise orbit parameters from the starting position
+        var flatPos = new Vector3(Position.X, 0, Position.Z);
+        OrbitDistance = Position.Length();
+        OrbitYaw      = flatPos.Length() > 0.001f
+            ? (float)Math.Atan2(flatPos.X, flatPos.Z)
+            : 0f;
+        OrbitPitch = (float)Math.Atan2(Position.Y, flatPos.Length());
+        OrbitTarget = Vector3.Zero;
     }
 
     public void Initialize(GraphicsDevice graphicsDevice)
@@ -68,17 +83,65 @@ public class WorkCamera : Node
         World = Matrix.Identity;
     }
 
-    public void MoveForward(float distance) => Position += Forward * distance;
+    public void MoveForward(float distance)  => Position += Forward * distance;
     public void MoveBackward(float distance) => Position += Backward * distance;
-    public void MoveLeft(float distance) => Position += Left * distance;
-    public void MoveRight(float distance) => Position += Right * distance;
-    public void MoveUp(float distance) => Position += Vector3.Up * distance;
-    public void MoveDown(float distance) => Position += Vector3.Down * distance;
+    public void MoveLeft(float distance)     => Position += Left * distance;
+    public void MoveRight(float distance)    => Position += Right * distance;
+    public void MoveUp(float distance)       => Position += Vector3.Up * distance;
+    public void MoveDown(float distance)     => Position += Vector3.Down * distance;
 
-    public void LookLeft(float radians) => Yaw -= radians;
+    public void LookLeft(float radians)  => Yaw -= radians;
     public void LookRight(float radians) => Yaw += radians;
-    public void LookUp(float radians) => Pitch -= radians;
-    public void LookDown(float radians) => Pitch += radians;
+    public void LookUp(float radians)    => Pitch -= radians;
+    public void LookDown(float radians)  => Pitch += radians;
+
+    /// <summary>
+    /// Applies a left-drag orbit delta (called from AppViewport.Update when NOT in fly mode).
+    /// </summary>
+    public void OrbitBy(float deltaX, float deltaY)
+    {
+        const float sensitivity = 0.005f;
+        OrbitYaw   -= deltaX * sensitivity;
+        OrbitPitch += deltaY * sensitivity;
+        const float limit = MathHelper.PiOver2 - 0.017f; // ≈89°
+        OrbitPitch = MathHelper.Clamp(OrbitPitch, -limit, limit);
+        UpdateOrbitTransform();
+    }
+
+    /// <summary>
+    /// Zooms the orbit camera by scrolling (called from AppViewport.Update when NOT in fly mode).
+    /// </summary>
+    public void OrbitZoom(float delta)
+    {
+        OrbitDistance = MathHelper.Clamp(OrbitDistance - delta * 0.5f, 1f, 50f);
+        UpdateOrbitTransform();
+    }
+
+    /// <summary>
+    /// Repositions the camera on the orbit sphere around <see cref="OrbitTarget"/>
+    /// and recomputes Yaw/Pitch to look back at the target.
+    /// </summary>
+    public void UpdateOrbitTransform()
+    {
+        float y = OrbitDistance * (float)Math.Sin(OrbitPitch);
+        float r = OrbitDistance * (float)Math.Cos(OrbitPitch);
+        float x = r * (float)Math.Sin(OrbitYaw);
+        float z = r * (float)Math.Cos(OrbitYaw);
+
+        // Set position directly without triggering PositionUpdated until we also set angles
+        var newPos = OrbitTarget + new Vector3(x, y, z);
+
+        // Derive look-at yaw/pitch toward OrbitTarget
+        var dir = Vector3.Normalize(OrbitTarget - newPos);
+        float newPitch = (float)Math.Asin(MathHelper.Clamp(dir.Y, -1f, 1f));
+        float newYaw   = (float)Math.Atan2(-dir.X, -dir.Z);
+
+        // Batch the update: set backing fields via base class properties
+        // Node setters each call PositionUpdated; final one rebuilds the view matrix
+        Pitch    = newPitch;
+        Yaw      = newYaw;
+        Position = newPos;
+    }
 
     public void Update(float deltaTime, int deltaX, int deltaY, int deltaWheel, bool isActive)
     {
@@ -102,6 +165,19 @@ public class WorkCamera : Node
             if (keyboard.IsKeyDown(Keys.E)) MoveUp(speed);
             if (keyboard.IsKeyDown(Keys.Q)) MoveDown(speed);
             if (keyboard.IsKeyDown(Keys.R)) Reset();
+
+            // Keep orbit state in sync so that switching back to orbit mode
+            // pivots around the point the camera is currently looking at.
+            // Place OrbitTarget directly in front of the camera at OrbitDistance.
+            OrbitTarget = Position + Forward * OrbitDistance;
+            // OrbitYaw matches fly Yaw.
+            // OrbitPitch is the *elevation* angle of the camera above the target,
+            // which is the opposite sign of the look-direction Pitch:
+            //   when the camera looks down (Pitch > 0), it sits above the target (OrbitPitch > 0)
+            //   → OrbitPitch = -Pitch
+            const float pitchLimit = MathHelper.PiOver2 - 0.017f;
+            OrbitYaw   = Yaw;
+            OrbitPitch = MathHelper.Clamp(-Pitch, -pitchLimit, pitchLimit);
         }
     }
 
