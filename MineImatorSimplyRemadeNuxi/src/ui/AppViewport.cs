@@ -8,6 +8,7 @@ using MineImatorSimplyRemadeNuxi.core;
 using MineImatorSimplyRemadeNuxi.core.mdl;
 using MineImatorSimplyRemadeNuxi.core.objs;
 using MineImatorSimplyRemadeNuxi.core.objs.nodes;
+using MineImatorSimplyRemadeNuxi.gizmo;
 
 namespace MineImatorSimplyRemadeNuxi.ui;
 
@@ -37,6 +38,10 @@ public class AppViewport
     private bool _orbitDragging;          // left-drag orbit is active
     private Vector2 _orbitClickPos;       // screen pos where left button was pressed
     private const float OrbitDeadzone = 5f;
+
+    // ── Gizmo ─────────────────────────────────────────────────────────────────
+    private Gizmo3D _gizmo;
+    private bool    _gizmoEditing;
 
     /// <summary>Set by App after both objects are created.</summary>
     public SpawnMenu SpawnMenu { get; set; }
@@ -70,7 +75,11 @@ public class AppViewport
     {
         this.camera = camera;
         this.graphicsDevice = graphicsDevice;
-        
+
+        // ── Gizmo ──────────────────────────────────────────────────────────────
+        _gizmo = new Gizmo3D(graphicsDevice);
+        SelectionManager.Instance.Gizmo = _gizmo;
+
         basicEffect = new BasicEffect(graphicsDevice);
         basicEffect.TextureEnabled = true;
         
@@ -152,39 +161,79 @@ public class AppViewport
             Program.App.IsMouseVisible = true;
         }
 
+        // ── Gizmo modifier keys (updated every frame) ────────────────────────
+        {
+            var kb = Keyboard.GetState();
+            _gizmo.Snapping  = kb.IsKeyDown(Keys.LeftControl) || kb.IsKeyDown(Keys.RightControl);
+            _gizmo.ShiftSnap = kb.IsKeyDown(Keys.LeftShift)   || kb.IsKeyDown(Keys.RightShift);
+        }
+
         // ── Left-button orbit drag (only when NOT in fly mode) ────────────────
         if (!_isActive && IsMouseOverImage())
         {
-            // Left button pressed this frame → record click position
+            var mousePos2D = new Vector2(currentMouse.X, currentMouse.Y);
+            var imageSize  = new Vector2(_imageMax.X - _imageMin.X, _imageMax.Y - _imageMin.Y);
+
+            // Gizmo hover – only while no button held
+            if (currentMouse.LeftButton == ButtonState.Released && !_gizmoEditing)
+                _gizmo.UpdateHover(mousePos2D, camera, _imageMin, imageSize);
+
+            // Gizmo interacting guard
+            bool gizmoInteracting = _gizmo.Hovering || _gizmoEditing;
+
+            // Left button pressed this frame
             if (currentMouse.LeftButton == ButtonState.Pressed &&
                 _prevFrameMouse.LeftButton == ButtonState.Released)
             {
-                _orbitClickPos  = new Vector2(currentMouse.X, currentMouse.Y);
-                _orbitDragging  = false;
+                // Try gizmo first
+                if (_gizmo.TryBeginEdit(mousePos2D, camera, _imageMin, imageSize))
+                {
+                    _gizmoEditing  = true;
+                    _orbitDragging = false;
+                }
+                else
+                {
+                    _orbitClickPos = mousePos2D;
+                    _orbitDragging = false;
+                }
             }
 
-            // Left button held → check for drag
+            // Left button held
             if (currentMouse.LeftButton == ButtonState.Pressed &&
                 _prevFrameMouse.LeftButton == ButtonState.Pressed)
             {
-                var delta = new Vector2(currentMouse.X - _prevFrameMouse.X,
-                                        currentMouse.Y - _prevFrameMouse.Y);
-                var clickDelta = new Vector2(currentMouse.X - _orbitClickPos.X,
-                                             currentMouse.Y - _orbitClickPos.Y);
+                if (_gizmoEditing)
+                {
+                    _gizmo.ContinueEdit(mousePos2D);
+                }
+                else if (!gizmoInteracting)
+                {
+                    var delta = new Vector2(currentMouse.X - _prevFrameMouse.X,
+                                            currentMouse.Y - _prevFrameMouse.Y);
+                    var clickDelta = new Vector2(currentMouse.X - _orbitClickPos.X,
+                                                 currentMouse.Y - _orbitClickPos.Y);
 
-                if (!_orbitDragging && clickDelta.Length() > OrbitDeadzone)
-                    _orbitDragging = true;
+                    if (!_orbitDragging && clickDelta.Length() > OrbitDeadzone)
+                        _orbitDragging = true;
 
-                if (_orbitDragging)
-                    camera.OrbitBy(delta.X, delta.Y);
+                    if (_orbitDragging)
+                        camera.OrbitBy(delta.X, delta.Y);
+                }
             }
 
-            // Left button released this frame → if no drag happened, do pick
+            // Left button released
             if (currentMouse.LeftButton == ButtonState.Released &&
-                _prevFrameMouse.LeftButton == ButtonState.Pressed &&
-                !_orbitDragging)
+                _prevFrameMouse.LeftButton == ButtonState.Pressed)
             {
-                PerformPickAtMouse(_prevFrameMouse.X, _prevFrameMouse.Y);
+                if (_gizmoEditing)
+                {
+                    _gizmo.EndEdit();
+                    _gizmoEditing = false;
+                }
+                else if (!_orbitDragging && !gizmoInteracting)
+                {
+                    PerformPickAtMouse(_prevFrameMouse.X, _prevFrameMouse.Y);
+                }
             }
 
             if (currentMouse.LeftButton == ButtonState.Released)
@@ -396,12 +445,22 @@ public class AppViewport
         }
         basicEffect.World = Matrix.Identity;
         basicEffect.Texture = savedTexture;
-        
+
+        // ── Gizmo 3D pass (into the same render target) ────────────────────────
+        _gizmo.Render(graphicsDevice, camera);
+
         graphicsDevice.SetRenderTarget(null);
         
         ImGui.Image(textureHandle, size);
         _imageMin = ImGui.GetItemRectMin();
         _imageMax = ImGui.GetItemRectMax();
+
+        // ── Gizmo 2D overlay (rotation arc / line, drawn over the image) ──────
+        {
+            var imgMin  = _imageMin;
+            var imgSize = new Vector2(_imageMax.X - imgMin.X, _imageMax.Y - imgMin.Y);
+            _gizmo.RenderOverlay(camera, imgMin, imgSize);
+        }
         
         // Texture button overlaid at the top-left corner of the viewport image
         float padding = 8f;

@@ -185,4 +185,64 @@ public class WorkCamera : Node
     {
         UpdateViewMatrix();
     }
+
+    // ── Gizmo camera-projection helpers ──────────────────────────────────────
+
+    /// <summary>
+    /// Returns the world-space origin of the ray passing through a screen pixel.
+    /// <paramref name="screenPos"/> is in absolute screen coordinates.
+    /// <paramref name="imageMin"/> and <paramref name="imageSize"/> describe the
+    /// on-screen rectangle of the viewport image (from ImGui item bounds).
+    /// </summary>
+    public Vector3 ProjectRayOrigin(Vector2 screenPos, Vector2 imageMin, Vector2 imageSize)
+    {
+        // For a perspective camera the ray origin is always the camera position.
+        return Position;
+    }
+
+    /// <summary>
+    /// Returns the world-space direction of the ray passing through a screen pixel.
+    /// </summary>
+    public Vector3 ProjectRayNormal(Vector2 screenPos, Vector2 imageMin, Vector2 imageSize)
+    {
+        if (imageSize.X <= 0 || imageSize.Y <= 0) return Forward;
+
+        // Normalised device coordinates in [-1, 1]
+        float ndcX = ((screenPos.X - imageMin.X) / imageSize.X) * 2f - 1f;
+        float ndcY = 1f - ((screenPos.Y - imageMin.Y) / imageSize.Y) * 2f;
+
+        // Unproject via inverse of Projection * View
+        Matrix viewProj    = View * Projection;
+        Matrix invViewProj = Matrix.Invert(viewProj);
+
+        Vector4 near = Vector4.Transform(new Vector4(ndcX, ndcY, 0f, 1f), invViewProj);
+        Vector4 far  = Vector4.Transform(new Vector4(ndcX, ndcY, 1f, 1f), invViewProj);
+
+        Vector3 nearPt = new Vector3(near.X, near.Y, near.Z) / near.W;
+        Vector3 farPt  = new Vector3(far.X,  far.Y,  far.Z)  / far.W;
+
+        return Vector3.Normalize(farPt - nearPt);
+    }
+
+    /// <summary>
+    /// Projects a world-space position to screen (pixel) coordinates within the
+    /// viewport image rectangle defined by <paramref name="imageMin"/> /
+    /// <paramref name="imageSize"/>.
+    /// </summary>
+    public Vector2 UnprojectPosition(Vector3 worldPos, Vector2 imageMin, Vector2 imageSize)
+    {
+        Matrix viewProj = View * Projection;
+        Vector4 clip    = Vector4.Transform(new Vector4(worldPos, 1f), viewProj);
+
+        if (MathF.Abs(clip.W) < 1e-7f)
+            return imageMin + imageSize * 0.5f;
+
+        float ndcX = clip.X / clip.W;
+        float ndcY = clip.Y / clip.W;
+
+        float screenX = (ndcX * 0.5f + 0.5f) * imageSize.X + imageMin.X;
+        float screenY = (1f - (ndcY * 0.5f + 0.5f)) * imageSize.Y + imageMin.Y;
+
+        return new Vector2(screenX, screenY);
+    }
 }

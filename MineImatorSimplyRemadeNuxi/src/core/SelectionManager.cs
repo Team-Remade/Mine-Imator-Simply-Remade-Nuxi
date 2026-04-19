@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using MineImatorSimplyRemadeNuxi.core.objs;
+using MineImatorSimplyRemadeNuxi.gizmo;
 
 namespace MineImatorSimplyRemadeNuxi.core;
 
@@ -30,6 +31,24 @@ public class SelectionManager
     public List<SceneObject> SelectedObjects { get; } = new();
 
     /// <summary>
+    /// The 3D gizmo used to transform selected objects.
+    /// Assign from AppViewport after both are created.
+    /// </summary>
+    private Gizmo3D _gizmo;
+    public Gizmo3D Gizmo
+    {
+        get => _gizmo;
+        set
+        {
+            if (_gizmo != null)
+                _gizmo.TransformEnd -= OnGizmoTransformEnd;
+            _gizmo = value;
+            if (_gizmo != null)
+                _gizmo.TransformEnd += OnGizmoTransformEnd;
+        }
+    }
+
+    /// <summary>
     /// Incrementing counter used to generate unique pick-colour IDs.
     /// Starts at 1 so that ID 0 can mean "nothing".
     /// </summary>
@@ -43,6 +62,26 @@ public class SelectionManager
     // ── Private constructor (force use of Initialize()) ──────────────────────
 
     private SelectionManager() { }
+
+    // ── Gizmo integration ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Re-syncs the gizmo's selection list with <see cref="SelectedObjects"/>.
+    /// Safe to call when <see cref="Gizmo"/> is null.
+    /// </summary>
+    private void SyncGizmoSelection()
+    {
+        if (_gizmo == null) return;
+        _gizmo.ClearSelection();
+        foreach (var obj in SelectedObjects)
+            _gizmo.Select(obj);
+    }
+
+    private void OnGizmoTransformEnd(Gizmo3D.TransformMode mode, Gizmo3D.TransformPlane plane)
+    {
+        // Notify all listeners (e.g. PropertiesPanel) so they can refresh.
+        SelectionChanged?.Invoke();
+    }
 
     // ── Public API ───────────────────────────────────────────────────────────
 
@@ -59,6 +98,7 @@ public class SelectionManager
         SelectedObjects.Add(obj);
         obj.IsSelected = true;
 
+        SyncGizmoSelection();
         SelectionChanged?.Invoke();
     }
 
@@ -74,6 +114,7 @@ public class SelectionManager
         SelectedObjects.Remove(obj);
         obj.IsSelected = false;
 
+        SyncGizmoSelection();
         SelectionChanged?.Invoke();
     }
 
@@ -102,6 +143,7 @@ public class SelectionManager
 
         SelectedObjects.Clear();
 
+        SyncGizmoSelection();
         SelectionChanged?.Invoke();
     }
 
