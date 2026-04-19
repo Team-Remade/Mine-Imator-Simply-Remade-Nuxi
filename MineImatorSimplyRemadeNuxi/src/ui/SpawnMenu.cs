@@ -4,6 +4,7 @@ using System.Linq;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using MineImatorSimplyRemadeNuxi.core.mdl;
+using Numerics = System.Numerics;
 using MineImatorSimplyRemadeNuxi.core.objs;
 
 namespace MineImatorSimplyRemadeNuxi.ui;
@@ -76,7 +77,7 @@ public class SpawnMenu
     /// bottom-right of the button that triggered it).  If <paramref name="screenPos"/>
     /// is null the window is centred on screen instead.
     /// </summary>
-    public void Toggle(System.Numerics.Vector2? screenPos = null)
+    public void Toggle(Numerics.Vector2? screenPos = null)
     {
         if (_isOpen)
         {
@@ -88,7 +89,7 @@ public class SpawnMenu
         _nextWindowPos = screenPos;
     }
 
-    private System.Numerics.Vector2? _nextWindowPos;
+    private Numerics.Vector2? _nextWindowPos;
 
     public void Render()
     {
@@ -100,7 +101,7 @@ public class SpawnMenu
             var io = ImGui.GetIO();
             float wx = Math.Min(_nextWindowPos.Value.X, io.DisplaySize.X - 910f);
             float wy = Math.Min(_nextWindowPos.Value.Y, io.DisplaySize.Y - 450f);
-            ImGui.SetNextWindowPos(new System.Numerics.Vector2(wx, wy), ImGuiCond.Always);
+            ImGui.SetNextWindowPos(new Numerics.Vector2(wx, wy), ImGuiCond.Always);
             _nextWindowPos = null; // only force position on the first frame
         }
         else
@@ -108,12 +109,12 @@ public class SpawnMenu
             // Centre on screen the very first time (no explicit anchor given)
             var io = ImGui.GetIO();
             ImGui.SetNextWindowPos(
-                new System.Numerics.Vector2(io.DisplaySize.X * 0.5f, io.DisplaySize.Y * 0.5f),
+                new Numerics.Vector2(io.DisplaySize.X * 0.5f, io.DisplaySize.Y * 0.5f),
                 ImGuiCond.Appearing,
-                new System.Numerics.Vector2(0.5f, 0.5f));
+                new Numerics.Vector2(0.5f, 0.5f));
         }
 
-        ImGui.SetNextWindowSize(new System.Numerics.Vector2(900, 440), ImGuiCond.Appearing);
+        ImGui.SetNextWindowSize(new Numerics.Vector2(900, 440), ImGuiCond.Appearing);
 
         if (ImGui.Begin("Spawn Menu##SpawnMenuWindow", ref _isOpen))
         {
@@ -156,12 +157,12 @@ public class SpawnMenu
         float totalHeight = ImGui.GetContentRegionAvail().Y - 40; // leave room for bottom bar
 
         // Three columns: Categories | Objects | Variants
-        ImGui.BeginChild("##cols", new System.Numerics.Vector2(0, totalHeight));
+        ImGui.BeginChild("##cols", new Numerics.Vector2(0, totalHeight));
 
         float columnWidth = ImGui.GetContentRegionAvail().X / 3f;
 
         // ── Categories ──────────────────────────────────────────────────────
-        ImGui.BeginChild("##categories", new System.Numerics.Vector2(columnWidth, 0), ImGuiChildFlags.Borders);
+        ImGui.BeginChild("##categories", new Numerics.Vector2(columnWidth, 0), ImGuiChildFlags.Borders);
         ImGui.TextDisabled("Categories");
         ImGui.Separator();
 
@@ -184,7 +185,7 @@ public class SpawnMenu
         ImGui.SameLine();
 
         // ── Objects ─────────────────────────────────────────────────────────
-        ImGui.BeginChild("##objects", new System.Numerics.Vector2(columnWidth, 0), ImGuiChildFlags.Borders);
+        ImGui.BeginChild("##objects", new Numerics.Vector2(columnWidth, 0), ImGuiChildFlags.Borders);
         ImGui.TextDisabled("Objects");
         ImGui.Separator();
 
@@ -219,7 +220,7 @@ public class SpawnMenu
         ImGui.SameLine();
 
         // ── Variants ────────────────────────────────────────────────────────
-        ImGui.BeginChild("##variants", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.Borders);
+        ImGui.BeginChild("##variants", new Numerics.Vector2(0, 0), ImGuiChildFlags.Borders);
         ImGui.TextDisabled("Variants");
         ImGui.Separator();
 
@@ -259,7 +260,7 @@ public class SpawnMenu
         bool canSpawn = CanSpawn();
 
         if (!canSpawn) ImGui.BeginDisabled();
-        if (ImGui.Button("Spawn", new System.Numerics.Vector2(buttonWidth, 28)))
+        if (ImGui.Button("Spawn", new Numerics.Vector2(buttonWidth, 28)))
         {
             TrySpawn();
         }

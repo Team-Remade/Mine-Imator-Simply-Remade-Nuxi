@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Hexa.NET.ImGui;
+using System.Numerics;
 using MineImatorSimplyRemadeNuxi.core;
 using MineImatorSimplyRemadeNuxi.core.objs;
 
@@ -102,7 +103,7 @@ public class SceneTree
         // Need at least a small height so the invisible item exists even when
         // the tree is full; clamp to a minimum of 8 px.
         float dropHeight = Math.Max(remaining.Y, 8f);
-        ImGui.InvisibleButton("##root_drop_target", new System.Numerics.Vector2(-1, dropHeight));
+        ImGui.InvisibleButton("##root_drop_target", new Vector2(-1, dropHeight));
 
         if (ImGui.BeginDragDropTarget())
         {

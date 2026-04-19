@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MineImatorSimplyRemadeNuxi.core.objs;
 using MineImatorSimplyRemadeNuxi.core.objs.nodes;
+using MineImatorSimplyRemadeNuxi.helpers;
+using Numerics = System.Numerics;
 
 namespace MineImatorSimplyRemadeNuxi.gizmo;
 
@@ -615,7 +617,7 @@ public class Gizmo3D
 
         var dl = ImGui.GetWindowDrawList();
 
-        System.Numerics.Vector2 center2d = PointToScreen(_edit.Center);
+        Numerics.Vector2 center2d = PointToScreen(_edit.Center);
 
         Color handleColor = _edit.Plane switch
         {
@@ -635,7 +637,7 @@ public class Gizmo3D
             Vector3 forward = Vector3.Cross(up, right);
 
             // Draw full circle
-            var circlePts = new List<System.Numerics.Vector2>(ARC_SEGMENTS + 1);
+            var circlePts = new List<Numerics.Vector2>(ARC_SEGMENTS + 1);
             for (int i = 0; i <= ARC_SEGMENTS; i++)
             {
                 float angle = (float)i / ARC_SEGMENTS * MathHelper.TwoPi;
@@ -698,7 +700,7 @@ public class Gizmo3D
         {
             Color lineColor = ColorFromHsv(GetHue(handleColor), 0.25f, 1f, 1f);
             dl.AddLine(
-                new System.Numerics.Vector2(_edit.MousePos.X, _edit.MousePos.Y),
+                VectorHelper.MonogameToSystemVec2(_edit.MousePos),
                 center2d,
                 ToImGuiColor(lineColor),
                 2f);
@@ -1720,11 +1722,11 @@ public class Gizmo3D
         return -Vector3.Normalize(new Vector3(_camera.View.M13, _camera.View.M23, _camera.View.M33));
     }
 
-    private System.Numerics.Vector2 PointToScreen(Vector3 worldPos)
+    private Numerics.Vector2 PointToScreen(Vector3 worldPos)
     {
         if (_camera == null) return default;
         Vector2 v = _camera.UnprojectPosition(worldPos, _imageMin, _imageSize);
-        return new System.Numerics.Vector2(v.X, v.Y);
+        return VectorHelper.MonogameToSystemVec2(v);
     }
 
     private Vector2 UnprojectPos(Vector3 worldPos)

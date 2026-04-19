@@ -9,6 +9,7 @@ using MineImatorSimplyRemadeNuxi.core.mdl;
 using MineImatorSimplyRemadeNuxi.core.objs;
 using MineImatorSimplyRemadeNuxi.core.objs.nodes;
 using MineImatorSimplyRemadeNuxi.gizmo;
+using Numerics = System.Numerics;
 
 namespace MineImatorSimplyRemadeNuxi.ui;
 
@@ -473,18 +474,18 @@ public class AppViewport
         
         // Texture button overlaid at the top-left corner of the viewport image
         float padding = 8f;
-        ImGui.SetCursorPos(new System.Numerics.Vector2(padding, ImGui.GetFrameHeight() + padding));
-        ImGui.PushStyleColor(ImGuiCol.Button, new System.Numerics.Vector4(0, 0, 0, 0));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new System.Numerics.Vector4(0, 0, 0, 0));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new System.Numerics.Vector4(0, 0, 0, 0));
-        bool benchClicked = ImGui.ImageButton("##benchBtn", _benchTextureHandle, new System.Numerics.Vector2(64, 64));
+        ImGui.SetCursorPos(new Numerics.Vector2(padding, ImGui.GetFrameHeight() + padding));
+        ImGui.PushStyleColor(ImGuiCol.Button, new Numerics.Vector4(0, 0, 0, 0));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Numerics.Vector4(0, 0, 0, 0));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Numerics.Vector4(0, 0, 0, 0));
+        bool benchClicked = ImGui.ImageButton("##benchBtn", _benchTextureHandle, new Numerics.Vector2(64, 64));
         ImGui.PopStyleColor(3);
 
         if (benchClicked && SpawnMenu != null)
         {
             var btnMax = ImGui.GetItemRectMax();
             var btnMin = ImGui.GetItemRectMin();
-            SpawnMenu.Toggle(new System.Numerics.Vector2(btnMin.X, btnMax.Y + 4f));
+            SpawnMenu.Toggle(new Numerics.Vector2(btnMin.X, btnMax.Y + 4f));
         }
         
         ImGui.End();

@@ -7,6 +7,7 @@ using FFMpegCore.Extensions.Downloader;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Numerics = System.Numerics;
 using MineImatorSimplyRemadeNuxi.core;
 using MineImatorSimplyRemadeNuxi.core.objs.nodes;
 using MineImatorSimplyRemadeNuxi.Gui;
@@ -164,12 +165,12 @@ public class App : Game
 
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0.0f);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.0f);
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, System.Numerics.Vector2.Zero);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Numerics.Vector2.Zero);
         ImGui.Begin("##DockSpaceWindow", dockWindowFlags);
         ImGui.PopStyleVar(3);
 
         uint dockspaceId = ImGui.GetID("##MainDockSpace");
-        ImGui.DockSpace(dockspaceId, System.Numerics.Vector2.Zero, ImGuiDockNodeFlags.PassthruCentralNode);
+        ImGui.DockSpace(dockspaceId, Numerics.Vector2.Zero, ImGuiDockNodeFlags.PassthruCentralNode);
 
         if (!_dockSpaceInitialized && !File.Exists(ImGuiIniPath))
         {
@@ -217,7 +218,7 @@ public class App : Game
         return Path.Combine(LocalPath, ApplicationLocalDirectory);
     }
     
-    private unsafe void SetupDefaultDockSpace(uint dockspaceId, System.Numerics.Vector2 size)
+    private unsafe void SetupDefaultDockSpace(uint dockspaceId, Numerics.Vector2 size)
     {
         ImGuiP.DockBuilderRemoveNode(dockspaceId);
         ImGuiP.DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags.None);

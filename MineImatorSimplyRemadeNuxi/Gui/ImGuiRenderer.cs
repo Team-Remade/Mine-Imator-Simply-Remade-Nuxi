@@ -5,6 +5,7 @@ using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Numerics = System.Numerics;
 
 namespace MineImatorSimplyRemadeNuxi.Gui;
 
@@ -315,9 +316,9 @@ public class ImGuiRenderer
 
         int backBufferWidth = _graphicsDevice.PresentationParameters.BackBufferWidth;
         int backBufferHeight = _graphicsDevice.PresentationParameters.BackBufferHeight;
-        io.DisplaySize = new System.Numerics.Vector2(backBufferWidth, backBufferHeight);
+        io.DisplaySize = new Numerics.Vector2(backBufferWidth, backBufferHeight);
 
-        io.DisplayFramebufferScale = System.Numerics.Vector2.One;
+        io.DisplayFramebufferScale = Numerics.Vector2.One;
     }
 
     private bool TryMapKeys(Keys key, out ImGuiKey imguiKey)
