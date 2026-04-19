@@ -1751,11 +1751,11 @@ public class Gizmo3D
     private static Transform3D GetWorldTransform(SceneObject obj)
     {
         Matrix rot = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
-        Matrix world =
-            Matrix.CreateTranslation(-obj.PivotOffset) *
-            rot *
-            Matrix.CreateTranslation(obj.Position);
-        return new Transform3D(rot, obj.Position);
+        Matrix basis = Matrix.CreateScale(obj.Scale) * rot;
+        // The rotation/pivot point lives at obj.Position in world space;
+        // the visual is offset from it by -PivotOffset (scaled & rotated),
+        // so the gizmo should sit at Position, not at the mesh centre.
+        return new Transform3D(basis, obj.Position);
     }
 
     private static Transform3D GetLocalTransform(SceneObject obj)

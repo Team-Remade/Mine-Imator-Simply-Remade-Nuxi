@@ -37,7 +37,7 @@ public class PropertiesPanel
     private SceneObject _currentObject;
 
     // Scale link toggle
-    private bool _linkScale = false;
+    private bool _linkScale = true;
 
     // ── Public wiring ─────────────────────────────────────────────────────────
 

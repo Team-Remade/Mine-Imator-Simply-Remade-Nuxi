@@ -353,6 +353,7 @@ public class AppViewport
                 var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
                 basicEffect.World =
                     Matrix.CreateTranslation(-obj.PivotOffset) *
+                    Matrix.CreateScale(obj.Scale) *
                     rotation *
                     Matrix.CreateTranslation(obj.Position);
 
@@ -376,6 +377,7 @@ public class AppViewport
                 var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
                 var world =
                     Matrix.CreateTranslation(-obj.PivotOffset) *
+                    Matrix.CreateScale(obj.Scale) *
                     rotation *
                     Matrix.CreateTranslation(obj.Position);
 
