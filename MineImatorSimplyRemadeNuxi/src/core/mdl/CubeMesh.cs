@@ -1,6 +1,6 @@
 ﻿namespace MineImatorSimplyRemadeNuxi.core.mdl;
 
-public class Cube : Mesh
+public class CubeMesh : Mesh
 {
     protected override void GenerateVertices()
     {
