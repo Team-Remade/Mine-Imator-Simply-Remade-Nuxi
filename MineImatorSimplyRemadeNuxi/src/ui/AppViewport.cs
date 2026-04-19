@@ -342,12 +342,34 @@ public class AppViewport
         SceneTree?.Refresh();
     }
 
+    /// <summary>Renders all scene objects (and their children) using <see cref="basicEffect"/>.</summary>
+    private void RenderObjects(IEnumerable<SceneObject> objects)
+    {
+        foreach (var obj in objects)
+        {
+            if (obj.GetEffectiveVisibility() && obj.Visuals.Count > 0)
+            {
+                var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
+                basicEffect.World =
+                    Matrix.CreateTranslation(-obj.PivotOffset) *
+                    rotation *
+                    Matrix.CreateTranslation(obj.Position);
+
+                foreach (var mesh in obj.Visuals)
+                    mesh.Render(graphicsDevice, basicEffect);
+            }
+
+            if (obj.Children.Count > 0)
+                RenderObjects(obj.Children);
+        }
+    }
+
     /// <summary>Renders all selectable objects with their pick colour using <see cref="_pickEffect"/>.</summary>
     private void RenderPickObjects(IEnumerable<SceneObject> objects)
     {
         foreach (var obj in objects)
         {
-            if (obj.IsSelectable && obj.Visual is Mesh mesh)
+            if (obj.IsSelectable && obj.Visuals.Count > 0)
             {
                 // Build the same world transform as the normal render pass
                 var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
@@ -359,8 +381,8 @@ public class AppViewport
                 _pickEffect.Parameters["World"]?.SetValue(world);
                 _pickEffect.Parameters["pick_color"]?.SetValue(obj.PickColor);
 
-                // Use the generic Effect overload on Mesh (no VertexBuffer access needed)
-                mesh.Render(graphicsDevice, _pickEffect);
+                foreach (var mesh in obj.Visuals)
+                    mesh.Render(graphicsDevice, _pickEffect);
             }
 
             // Recurse into children
@@ -429,18 +451,7 @@ public class AppViewport
         // Render spawned scene objects
         var savedTexture = basicEffect.Texture;
         basicEffect.Texture = whiteTexture;
-        foreach (var obj in SceneObjects)
-        {
-            if (obj.Visual is Mesh mesh)
-            {
-                var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
-                basicEffect.World =
-                    Matrix.CreateTranslation(-obj.PivotOffset) *
-                    rotation *
-                    Matrix.CreateTranslation(obj.Position);
-                mesh.Render(graphicsDevice, basicEffect);
-            }
-        }
+        RenderObjects(SceneObjects);
         basicEffect.World = Matrix.Identity;
         basicEffect.Texture = savedTexture;
 

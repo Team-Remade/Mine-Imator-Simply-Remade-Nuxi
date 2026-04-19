@@ -464,8 +464,9 @@ public class SceneTree
         dup.TextureType = original.TextureType;
         dup.SourceAssetPath = original.SourceAssetPath;
 
-        // Visual: copy the reference (shared mesh is fine for now — deep copy not possible without a mesh API)
-        dup.Visual = original.Visual;
+        // Visuals: share mesh references (deep copy not possible without a mesh clone API)
+        foreach (var mesh in original.Visuals)
+            dup.AddMesh(mesh);
 
         return dup;
     }

@@ -429,7 +429,7 @@ public class SpawnMenu
         {
             var graphicsDevice = Program.App.GraphicsDevice;
             // 1 metre × 1 metre vertical (XY) plane
-            sceneObject.Visual = new MineImatorSimplyRemadeNuxi.core.mdl.PlaneMesh(1f, 1f, PlaneOrientation.XY, graphicsDevice);
+            sceneObject.AddMesh(new PlaneMesh(1f, 1f, PlaneOrientation.XY, graphicsDevice));
         }
 
         Viewport.SceneObjects.Add(sceneObject);

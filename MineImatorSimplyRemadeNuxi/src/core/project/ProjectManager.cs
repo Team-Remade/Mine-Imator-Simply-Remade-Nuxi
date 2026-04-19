@@ -970,7 +970,7 @@ public static class ProjectManager
 		entry.ExtraData["CastShadow"] = obj.CastShadow.ToString();
 
 		// Store material properties from the first mesh instance's first surface material
-		var meshInstances = obj.GetMeshInstancesRecursively(obj.Visual);
+		var meshInstances = obj.GetMeshInstancesRecursively();
 		if (meshInstances.Count > 0 && meshInstances[0] != null && meshInstances[0].GetSurfaceCount() > 0)
 		{
 			var material = meshInstances[0].SurfaceGetMaterial(0);
@@ -1354,7 +1354,7 @@ public static class ProjectManager
 		if (!hasMaterialData) return;
 
 		// Apply material properties to all mesh instances
-		var meshInstances = obj.GetMeshInstancesRecursively(obj.Visual);
+		var meshInstances = obj.GetMeshInstancesRecursively();
 		foreach (var meshInstance in meshInstances)
 		{
 			if (meshInstance == null) continue;
@@ -1409,7 +1409,7 @@ public static class ProjectManager
 		//	return;
 		}
 
-		var meshInstances = cameraObj.GetMeshInstancesRecursively(cameraObj.Visual);
+		var meshInstances = cameraObj.GetMeshInstancesRecursively();
 		foreach (var meshInstance in meshInstances.Where(meshInstance => meshInstance != null))
 		{
 			for (int i = 0; i < meshInstance.GetSurfaceCount(); i++)
