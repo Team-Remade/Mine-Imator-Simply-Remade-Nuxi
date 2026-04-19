@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -29,7 +30,7 @@ public class PropertiesPanel
     public int GetFramerate()        => 0;
 
     public int    TextureAnimationFps  = 0;
-    public string BackgroundImagePath  = "";
+    public string BackgroundImagePath  = "No image selected";
     public bool   StretchBackground    = true;
 
     // ── Object tab state ──────────────────────────────────────────────────────
@@ -176,6 +177,24 @@ public class PropertiesPanel
                         BackgroundColor[1] = presets[i].g;
                         BackgroundColor[2] = presets[i].b;
                         BackgroundColor[3] = presets[i].a;
+                    }
+                }
+                ImGui.Spacing();
+                // Background Image (display only; file picking not yet implemented)
+                {
+                    ImGui.Text("Background Image:");
+                    ImGui.SameLine();
+                    string backgroundImg = Path.GetFileName(BackgroundImagePath);
+                    ImGui.Text(backgroundImg);
+                    // TODO: open NativeFileDialog to pick a background texture file
+                    if (ImGui.Button("Browse##backgroundBrowse"))
+                    {
+                        // TODO: implement background image file picker
+                    }
+                    ImGui.SameLine();
+                    if (ImGui.Button("Clear##backgroundClear") && BackgroundImagePath != "No image selected")
+                    {
+                        BackgroundImagePath = "No image selected";
                     }
                 }
             }
@@ -495,7 +514,6 @@ public class PropertiesPanel
             {
                 string normalName = (mat?.NormalTexture != null) ? "(texture)" : "None";
                 ImGui.Text("Normal: " + normalName);
-                ImGui.SameLine();
                 // TODO: open NativeFileDialog to pick a normal-map texture file
                 if (ImGui.Button("Browse##normalBrowse"))
                 {
