@@ -527,9 +527,18 @@ public class Gizmo3D
     /// </summary>
     public void Render(GraphicsDevice gd, WorkCamera camera)
     {
+        // Always update the camera reference so that UpdateTransformGizmoView()
+        // has a valid camera even when the mouse has not yet entered the viewport
+        // (e.g. after a position change driven by the PropertiesPanel).
+        _camera = camera;
+
+        // Recompute gizmo origin from live object positions every frame so that
+        // external changes (e.g. PropertiesPanel DragFloat) move the gizmo
+        // immediately without requiring a mouse-hover event.
+        UpdateTransformGizmo();
+
         if (!Visible || _selections.Count == 0) return;
 
-        _camera = camera;
         UpdateTransformGizmoView();
 
         _effect.View       = camera.View;
@@ -1595,15 +1604,15 @@ public class Gizmo3D
 
             if (_edit.Mode == TransformMode.Translate)
             {
-                obj.Position = newTransform.Origin;
+                obj.SetLocalPosition(newTransform.Origin);
             }
             else if (_edit.Mode == TransformMode.Rotate)
             {
-                obj.Rotation = MatrixToEulerYXZ(newTransform.Basis);
+                obj.SetLocalRotation(MatrixToEulerYXZ(newTransform.Basis));
             }
             else if (_edit.Mode == TransformMode.Scale)
             {
-                obj.Scale = ExtractScale(newTransform.Basis);
+                obj.SetLocalScale(ExtractScale(newTransform.Basis));
             }
         }
 

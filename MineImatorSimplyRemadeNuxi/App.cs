@@ -96,6 +96,7 @@ public class App : Game
         _menuBar = new MenuBar();
         _sceneTree = new SceneTree();
         Properties = new PropertiesPanel();
+        Properties.Initialize();
         _timeline = new Timeline();
         _spawnMenu = new SpawnMenu();
         Viewport.SpawnMenu = _spawnMenu;
