@@ -253,7 +253,6 @@ public static class ProjectManager
 	public static string ModelsFolder  => Path.Combine(AssetsFolder, ModelsFolderName);
 	public static string ImagesFolder  => Path.Combine(AssetsFolder, ImagesFolderName);
 	public static string AudioFolder   => Path.Combine(AssetsFolder, AudioFolderName);
-	public static string RendersFolder => Path.Combine(CurrentProjectFolder, RendersFolderName);
 
 	// ── Project lifecycle ─────────────────────────────────────────────────────
 
@@ -336,10 +335,10 @@ public static class ProjectManager
 			ClearDirty();
 
 			Console.WriteLine($"Opened project '{CurrentProjectName}' from '{projectFilePath}'");
-		AddToRecentProjects(projectFilePath, CurrentProjectName);
-		ProjectOpened?.Invoke(CurrentProjectFolder);
-		AssetsChanged?.Invoke();
-		return true;
+			AddToRecentProjects(projectFilePath, CurrentProjectName);
+			ProjectOpened?.Invoke(CurrentProjectFolder);
+			AssetsChanged?.Invoke();
+			return true;
 		}
 		catch (Exception ex)
 		{
@@ -763,8 +762,8 @@ public static class ProjectManager
 			_currentData.Settings.StretchBackground = propPanel.StretchBackground;
 
 			// Get sky setting
-			//_currentData.Settings.UseSky = propPanel.UseSky;
-			//_currentData.Settings.UseAdvancedSky = propPanel.UseAdvancedSky;
+			_currentData.Settings.UseSky = propPanel.UseSky;
+			_currentData.Settings.UseAdvancedSky = propPanel.UseAdvancedSky;
 	
 			// Save Minecraft sky shader colors
 			//var skyColors = propPanel.GetSkyShaderColors();
@@ -867,7 +866,7 @@ public static class ProjectManager
 			var propPanel = Program.App.Properties;
 
 			// Access the dropdown to get the selected texture name
-			//var dropdown = propPanel?.GetNodeOrNull<Godot.OptionButton>("FloorTextureDropdown");
+			//var dropdown = propPanel?.GetNodeOrNull<OptionButton>("FloorTextureDropdown");
 			//if (dropdown == null || dropdown.Selected < 0) return "";
 
 			// Get the text of the selected item
@@ -981,8 +980,7 @@ public static class ProjectManager
 				entry.ExtraData["MatMetallic"] = stdMat.Metallic.ToString(System.Globalization.CultureInfo.InvariantCulture);
 				entry.ExtraData["MatRoughness"] = stdMat.Roughness.ToString(System.Globalization.CultureInfo.InvariantCulture);
 				entry.ExtraData["MatNormalEnabled"] = stdMat.NormalEnabled.ToString();
-				if (stdMat.NormalTexture != null && !string.IsNullOrEmpty(stdMat.NormalTexture.Name))
-					entry.ExtraData["MatNormalPath"] = stdMat.NormalTexture.Name;
+				if (stdMat.NormalTexture != null && !string.IsNullOrEmpty(stdMat.NormalTexture.Name)) entry.ExtraData["MatNormalPath"] = stdMat.NormalTexture.Name;
 				entry.ExtraData["MatTransparency"] = ((int)stdMat.Transparency).ToString();
 				entry.ExtraData["MatAlpha"] = stdMat.AlbedoColor.A.ToString(System.Globalization.CultureInfo.InvariantCulture);
 				entry.ExtraData["MatEmissionEnabled"] = stdMat.EmissionEnabled.ToString();
@@ -1017,8 +1015,7 @@ public static class ProjectManager
 				entry.ExtraData["MatMetallic"] = stdMat.Metallic.ToString(System.Globalization.CultureInfo.InvariantCulture);
 				entry.ExtraData["MatRoughness"] = stdMat.Roughness.ToString(System.Globalization.CultureInfo.InvariantCulture);
 				entry.ExtraData["MatNormalEnabled"] = stdMat.NormalEnabled.ToString();
-				if (stdMat.NormalTexture != null && !string.IsNullOrEmpty(stdMat.NormalTexture.Name))
-					entry.ExtraData["MatNormalPath"] = stdMat.NormalTexture.Name;
+				if (stdMat.NormalTexture != null && !string.IsNullOrEmpty(stdMat.NormalTexture.Name)) entry.ExtraData["MatNormalPath"] = stdMat.NormalTexture.Name;
 				entry.ExtraData["MatTransparency"] = ((int)stdMat.Transparency).ToString();
 				entry.ExtraData["MatAlpha"] = stdMat.AlbedoColor.A.ToString(System.Globalization.CultureInfo.InvariantCulture);
 				entry.ExtraData["MatEmissionEnabled"] = stdMat.EmissionEnabled.ToString();
@@ -1082,8 +1079,8 @@ public static class ProjectManager
 		_currentData.SceneObjects.Add(entry);
 
 		// Recurse into children
-		//foreach (var child in obj.GetChildrenObjects())
-		//	CollectSceneObjectRecursive(child, obj.ObjectId);
+		foreach (var child in obj.Children)
+			CollectSceneObjectRecursive(child, obj.ObjectId);
 	}
 
 	private static readonly HashSet<string> PrimitiveTypes = new HashSet<string>(
@@ -1112,8 +1109,7 @@ public static class ProjectManager
 		// Clear existing user-placed SceneObjects from the viewport
 		foreach (var child in viewport.GetChildren())
 		{
-			//if (child is SceneObject)
-				//child.QueueFree();
+			//child.QueueFree();
 		}
 
 		// Collect top-level entries only (children are re-created by their parent's loader)
@@ -1333,7 +1329,7 @@ public static class ProjectManager
 	{
 		// Collect material property values from ExtraData
 		var hasMaterialData = false;
-		//Color albedoColor = Colors.White;
+		Color albedoColor = Color.White;
 		float metallic = 0f;
 		float roughness = 0.5f;
 		bool normalEnabled = false;
@@ -1341,7 +1337,7 @@ public static class ProjectManager
 		//BaseMaterial3D.TransparencyEnum transparency = BaseMaterial3D.TransparencyEnum.Disabled;
 		float alpha = 1f;
 		bool emissionEnabled = false;
-		//Color emissionColor = Colors.Black;
+		Color emissionColor = Color.Black;
 		float emissionEnergy = 1f;
 
 		//if (entry.ExtraData.TryGetValue("MatAlbedoColor", out var albedoStr)) { try { albedoColor = new Color(albedoStr); hasMaterialData = true; } catch { }}
@@ -1381,7 +1377,7 @@ public static class ProjectManager
 
 				// Apply the saved properties
 				//albedoColor.A = alpha;
-				//stdMat.AlbedoColor = albedoColor;
+				stdMat.AlbedoColor = albedoColor;
 				stdMat.Metallic = metallic;
 				stdMat.Roughness = roughness;
 				stdMat.NormalEnabled = normalEnabled;
@@ -1393,7 +1389,7 @@ public static class ProjectManager
 				}
 				//stdMat.Transparency = transparency;
 				stdMat.EmissionEnabled = emissionEnabled;
-				//stdMat.Emission = emissionColor;
+				stdMat.Emission = emissionColor;
 				stdMat.EmissionEnergyMultiplier = emissionEnergy;
 			}
 		}
@@ -1544,7 +1540,7 @@ public static class ProjectManager
 
 	private static int CountSceneObjects(AppViewport viewport)
 	{
-		return 0;// viewport.GetChildren().OfType<SceneObject>().Count();
+		return viewport.GetChildren().Length;
 	}
 
 	/// <summary>
@@ -1553,12 +1549,11 @@ public static class ProjectManager
 	/// </summary>
 	private static SceneObject FindNewestSceneObject(AppViewport viewport, int countBefore)
 	{
-		//var children = viewport.GetChildren();
+		var children = viewport.GetChildren();
 		// Walk backwards to find the most recently added SceneObject
-		//for (int i = children.Count - 1; i >= 0; i--)
+		for (int i = children.Length - 1; i >= 0; i--)
 		{
-		//	if (children[i] is SceneObject so)
-		//		return so;
+			return children[i];
 		}
 		return null;
 	}
@@ -1624,14 +1619,14 @@ public static class ProjectManager
 	/// </summary>
 	private static SceneObject FindDescendantByName(SceneObject root, string name)
 	{
-		//foreach (var child in root.GetChildrenObjects())
+		foreach (var child in root.Children)
 		{
-		//	if (child.Name == name)
-		//		return child;
+			if (child.Name == name)
+				return child;
 
-		//	var found = FindDescendantByName(child, name);
-		//	if (found != null)
-		//		return found;
+			var found = FindDescendantByName(child, name);
+			if (found != null)
+				return found;
 		}
 		return null;
 	}
@@ -1785,7 +1780,7 @@ public static class ProjectManager
 	{
 		return ext switch
 		{
-			".glb" or ".gltf" or ".mimodel" or ".miobject" or ".blend" => ModelsFolder,
+			".glb" or ".gltf" or ".mimodel" or ".miobject" => ModelsFolder,
 			".png" or ".jpg" or ".jpeg" or ".bmp" or ".webp" => ImagesFolder,
 			".wav" or ".mp3" or ".ogg" => AudioFolder,
 			_ => AssetsFolder,

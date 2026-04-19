@@ -9,13 +9,13 @@ public enum PlaneOrientation
     XZ
 }
 
-public class Plane : Mesh
+public class PlaneMesh : Mesh
 {
     public float Width { get; set; }
     public float Height { get; set; }
     public PlaneOrientation Orientation { get; set; }
 
-    public Plane(float width, float height, PlaneOrientation orientation, GraphicsDevice graphicsDevice)
+    public PlaneMesh(float width, float height, PlaneOrientation orientation, GraphicsDevice graphicsDevice)
     {
         Width = width;
         Height = height;

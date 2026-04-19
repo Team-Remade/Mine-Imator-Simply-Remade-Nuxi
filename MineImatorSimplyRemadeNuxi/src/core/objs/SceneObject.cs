@@ -13,6 +13,9 @@ public class SceneObject
     public Vector3 Rotation;
     public Vector3 Scale;
     
+    public Vector3 TargetPosition;
+    public Vector3 TargetRotation;
+    
     public Vector3 LocalPosition;
     public Vector3 LocalRotation;
     public Vector3 LocalScale;

@@ -9,6 +9,9 @@ public class PropertiesPanel
     public Node Floor;
     
     public float[] BackgroundColor = [0.5764706f, 0.5764706f, 1f, 1f];
+    
+    public bool UseSky;
+    public bool UseAdvancedSky;
 
     public int GetResolutionWidth()
     {

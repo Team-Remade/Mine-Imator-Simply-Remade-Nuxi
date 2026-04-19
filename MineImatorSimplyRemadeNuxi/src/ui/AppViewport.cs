@@ -24,8 +24,7 @@ public class AppViewport
     Texture2D whiteTexture;
     Texture2D _benchTexture;
     ImTextureRef _benchTextureHandle;
-    core.mdl.Plane xzPlane;
-    VertexBuffer coloredVertexBuffer;
+    PlaneMesh _xzPlaneMesh;
     
     private MouseState _lastMouseState;
     private MouseState _prevFrameMouse;    // mouse state at end of previous frame
@@ -83,8 +82,7 @@ public class AppViewport
         basicEffect = new BasicEffect(graphicsDevice);
         basicEffect.TextureEnabled = true;
         
-        xzPlane = new core.mdl.Plane(64f, 64f, PlaneOrientation.XZ, graphicsDevice);
-        coloredVertexBuffer = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), 0, BufferUsage.WriteOnly);
+        _xzPlaneMesh = new PlaneMesh(64f, 64f, PlaneOrientation.XZ, graphicsDevice);
         
         renderTarget = new RenderTarget2D(graphicsDevice, 512, 512,
             false, SurfaceFormat.Color, DepthFormat.Depth24);
@@ -426,7 +424,7 @@ public class AppViewport
             AddressV = TextureAddressMode.Wrap
         };
         camera.ApplyToEffect(basicEffect);
-        xzPlane.Render(graphicsDevice, basicEffect);
+        _xzPlaneMesh.Render(graphicsDevice, basicEffect);
 
         // Render spawned scene objects
         var savedTexture = basicEffect.Texture;
