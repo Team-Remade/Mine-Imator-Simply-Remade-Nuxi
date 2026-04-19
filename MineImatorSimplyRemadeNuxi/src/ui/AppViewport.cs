@@ -4,6 +4,7 @@ using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MineImatorSimplyRemadeNuxi.core;
 using MineImatorSimplyRemadeNuxi.core.mdl;
 using MineImatorSimplyRemadeNuxi.core.objs;
 using MineImatorSimplyRemadeNuxi.core.objs.nodes;
@@ -32,8 +33,30 @@ public class AppViewport
     /// <summary>Set by App after both objects are created.</summary>
     public SpawnMenu SpawnMenu { get; set; }
 
+    /// <summary>Set by App to allow viewport selection to notify the scene tree.</summary>
+    public SceneTree SceneTree { get; set; }
+
     /// <summary>All scene objects currently in the viewport.</summary>
     public List<SceneObject> SceneObjects { get; } = new();
+
+    /// <summary>
+    /// The primary selected scene object (null = nothing selected).
+    /// Getting returns the first entry in <see cref="SelectionManager.SelectedObjects"/>.
+    /// Setting delegates to SelectionManager so that all listeners stay in sync.
+    /// </summary>
+    public SceneObject SelectedObject
+    {
+        get => SelectionManager.Instance?.SelectedObjects.Count > 0
+            ? SelectionManager.Instance.SelectedObjects[0]
+            : null;
+        set
+        {
+            if (SelectionManager.Instance == null) return;
+            SelectionManager.Instance.ClearSelection();
+            if (value != null)
+                SelectionManager.Instance.SelectObject(value);
+        }
+    }
     
     public AppViewport(WorkCamera camera, GraphicsDevice graphicsDevice)
     {

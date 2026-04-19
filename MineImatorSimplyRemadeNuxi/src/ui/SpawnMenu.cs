@@ -15,12 +15,16 @@ public class SpawnMenu
 
     private string _selectedCategory = "Primitives";
     private int _selectedObjectIndex = -1;
+    private int _selectedVariantIndex = -1;
 
     private string _searchQuery = "";
     private string _searchBuffer = "";
 
     // Category → list of object names
     private readonly Dictionary<string, List<string>> _categories;
+
+    // Variant data per-object (populated for Blocks when that system is added)
+    private List<string> _currentVariants = new();
 
     // Custom-model history  (in-memory; load/save not yet implemented)
     private readonly List<string> _customModelHistory = new();
@@ -134,6 +138,7 @@ public class SpawnMenu
         {
             _searchQuery = _searchBuffer;
             _selectedObjectIndex = -1;
+            _selectedVariantIndex = -1;
         }
 
         ImGui.SameLine();
@@ -142,6 +147,7 @@ public class SpawnMenu
             _searchBuffer = "";
             _searchQuery = "";
             _selectedObjectIndex = -1;
+            _selectedVariantIndex = -1;
         }
     }
 
@@ -168,6 +174,8 @@ public class SpawnMenu
                 {
                     _selectedCategory = category;
                     _selectedObjectIndex = -1;
+                    _selectedVariantIndex = -1;
+                    _currentVariants.Clear();
                 }
             }
         }
@@ -194,6 +202,7 @@ public class SpawnMenu
                 if (ImGui.Selectable(filtered[i] + "##obj" + i, selected))
                 {
                     _selectedObjectIndex = i;
+                    _selectedVariantIndex = -1;
                     OnObjectSelected(filtered[i]);
                 }
 
@@ -213,9 +222,29 @@ public class SpawnMenu
         ImGui.BeginChild("##variants", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.Borders);
         ImGui.TextDisabled("Variants");
         ImGui.Separator();
-        // Variant support depends on the Minecraft block-state system which is
-        // not yet implemented — nothing to show here for now.
-        ImGui.TextDisabled("(not available)");
+
+        if (_currentVariants.Count > 0)
+        {
+            for (int i = 0; i < _currentVariants.Count; i++)
+            {
+                bool selected = _selectedVariantIndex == i;
+                if (ImGui.Selectable(_currentVariants[i] + "##var" + i, selected))
+                {
+                    _selectedVariantIndex = i;
+                }
+
+                if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+                {
+                    _selectedVariantIndex = i;
+                    TrySpawn();
+                }
+            }
+        }
+        else
+        {
+            ImGui.TextDisabled("(not available)");
+        }
+
         ImGui.EndChild();
 
         ImGui.EndChild(); // ##cols
@@ -227,9 +256,7 @@ public class SpawnMenu
         float buttonWidth = 110f;
         ImGui.SetCursorPosX(ImGui.GetContentRegionAvail().X - buttonWidth + ImGui.GetCursorPosX());
 
-        bool canSpawn = _selectedObjectIndex >= 0 && _selectedCategory != "Custom Models" ||
-                        (_selectedCategory == "Custom Models" && _selectedObjectIndex >= 0 &&
-                         GetFilteredObjects().ElementAtOrDefault(_selectedObjectIndex) != "Load...");
+        bool canSpawn = CanSpawn();
 
         if (!canSpawn) ImGui.BeginDisabled();
         if (ImGui.Button("Spawn", new System.Numerics.Vector2(buttonWidth, 28)))
@@ -240,6 +267,25 @@ public class SpawnMenu
         if (!canSpawn) ImGui.EndDisabled();
     }
 
+    private bool CanSpawn()
+    {
+        if (_selectedObjectIndex < 0) return false;
+
+        var filtered = GetFilteredObjects();
+        if (_selectedObjectIndex >= filtered.Count) return false;
+
+        var objectName = filtered[_selectedObjectIndex];
+
+        if (_selectedCategory == "Custom Models")
+            return objectName != "Load..." && _customModelPaths.ContainsKey(objectName);
+
+        // Blocks require a variant selection (no variants yet = not spawnable)
+        if (_selectedCategory == "Blocks")
+            return _currentVariants.Count > 0 && _selectedVariantIndex >= 0;
+
+        return true;
+    }
+
     // ── Event handlers ───────────────────────────────────────────────────────
 
     private void OnObjectSelected(string objectName)
@@ -247,7 +293,19 @@ public class SpawnMenu
         if (_selectedCategory == "Custom Models" && objectName == "Load...")
         {
             // File dialog not yet implemented — skip
+            _currentVariants.Clear();
+            return;
         }
+
+        // For Blocks: populate variant list (not yet implemented, would call MinecraftModelHelper)
+        if (_selectedCategory == "Blocks")
+        {
+            // TODO: Populate _currentVariants from block-state JSON when that system exists
+            _currentVariants.Clear();
+            return;
+        }
+
+        _currentVariants.Clear();
     }
 
     private void OnObjectDoubleClicked(string objectName)
@@ -255,6 +313,12 @@ public class SpawnMenu
         if (_selectedCategory == "Custom Models" && objectName == "Load...")
         {
             // File dialog not yet implemented — skip
+            return;
+        }
+
+        if (_selectedCategory == "Blocks")
+        {
+            // Blocks need a variant chosen first; double-click on object list not enough
             return;
         }
 
@@ -277,7 +341,8 @@ public class SpawnMenu
     {
         if (Viewport == null) return;
 
-        string fullObjectName = objectName; // numbering not yet implemented
+        int nextNum = GetNextAvailableObjectNumber(objectName);
+        string fullObjectName = nextNum > 1 ? $"{objectName}{nextNum}" : objectName;
 
         switch (_selectedCategory)
         {
@@ -301,6 +366,9 @@ public class SpawnMenu
                 SpawnPrimitiveObject(objectName, fullObjectName);
                 break;
         }
+
+        // Notify scene tree to refresh after spawn
+        Viewport.SceneTree?.Refresh();
     }
 
     // ── Public spawn helpers (usable by external systems) ────────────────────
@@ -318,8 +386,7 @@ public class SpawnMenu
             Position = Vector3.Zero
         };
 
-        // TODO: add to viewport scene graph when that system is implemented
-
+        Viewport.SceneObjects.Add(cameraObject);
         return cameraObject;
     }
 
@@ -336,8 +403,7 @@ public class SpawnMenu
             Position = Vector3.Zero
         };
 
-        // TODO: add to viewport scene graph when that system is implemented
-
+        Viewport.SceneObjects.Add(lightObject);
         return lightObject;
     }
 
@@ -376,6 +442,44 @@ public class SpawnMenu
         return string.IsNullOrEmpty(_searchQuery)
             ? all
             : all.Where(o => o.Contains(_searchQuery, System.StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    /// <summary>
+    /// Returns the next available instance number for the given object type name.
+    /// Finds the lowest positive integer N such that neither "<paramref name="objectType"/>"
+    /// (treated as N=1) nor "<paramref name="objectType"/>N" (for N≥2) is already used.
+    /// </summary>
+    private int GetNextAvailableObjectNumber(string objectType)
+    {
+        var usedNumbers = new HashSet<int>();
+
+        if (Viewport != null)
+        {
+            foreach (var root in Viewport.SceneObjects)
+                ScanNode(root);
+        }
+
+        int next = 1;
+        while (usedNumbers.Contains(next)) next++;
+        return next;
+
+        void ScanNode(SceneObject node)
+        {
+            var name = node.GetDisplayName();
+            if (name == objectType)
+            {
+                usedNumbers.Add(1);
+            }
+            else if (name.StartsWith(objectType) && name.Length > objectType.Length)
+            {
+                var suffix = name[objectType.Length..];
+                if (int.TryParse(suffix, out int num))
+                    usedNumbers.Add(num);
+            }
+
+            foreach (var child in node.Children)
+                ScanNode(child);
+        }
     }
 
     private string CleanBlockName(string fileName)

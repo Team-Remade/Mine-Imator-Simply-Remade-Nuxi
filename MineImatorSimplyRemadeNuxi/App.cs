@@ -7,6 +7,7 @@ using FFMpegCore.Extensions.Downloader;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MineImatorSimplyRemadeNuxi.core;
 using MineImatorSimplyRemadeNuxi.core.objs.nodes;
 using MineImatorSimplyRemadeNuxi.Gui;
 using MineImatorSimplyRemadeNuxi.ui;
@@ -76,7 +77,9 @@ public class App : Game
         
         GuiRenderer = new ImGuiRenderer(this);
         ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
-        
+
+        SelectionManager.Initialize();
+
         camera = new WorkCamera();
         camera.Initialize(GraphicsDevice);
         
@@ -95,7 +98,9 @@ public class App : Game
         _timeline = new Timeline();
         _spawnMenu = new SpawnMenu();
         Viewport.SpawnMenu = _spawnMenu;
+        Viewport.SceneTree = _sceneTree;
         _spawnMenu.Viewport = Viewport;
+        _sceneTree.Viewport = Viewport;
 
         TerrainAtlas.Initialize(GraphicsDevice);
         ItemsAtlas.Initialize(GraphicsDevice);

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using MineImatorSimplyRemadeNuxi.core.mdl;
 
@@ -36,6 +37,56 @@ public class SceneObject
     
     public Vector3 PivotOffset;
 
+    // ── Selection ────────────────────────────────────────────────────────────
+    public bool IsSelected;
+    public bool IsSelectable = true;
+
+    // ── Hierarchy ────────────────────────────────────────────────────────────
+    /// <summary>Direct child SceneObjects (not the viewport root).</summary>
+    private readonly List<SceneObject> _children = new();
+
+    /// <summary>The parent SceneObject, or null if parented directly to the viewport.</summary>
+    public SceneObject Parent { get; private set; }
+
+    public IReadOnlyList<SceneObject> Children => _children;
+
+    /// <summary>Adds a child to this object and sets its Parent.</summary>
+    public void AddChild(SceneObject child)
+    {
+        if (child == null || child == this) return;
+        child.Parent?.RemoveChild(child);
+        child.Parent = this;
+        _children.Add(child);
+    }
+
+    /// <summary>Removes a child from this object and clears its Parent.</summary>
+    public void RemoveChild(SceneObject child)
+    {
+        if (_children.Remove(child))
+            child.Parent = null;
+    }
+
+    /// <summary>Returns the display name for UI use (falls back to ObjectType then "Object").</summary>
+    public string GetDisplayName()
+    {
+        if (!string.IsNullOrEmpty(Name)) return Name;
+        if (!string.IsNullOrEmpty(ObjectType)) return ObjectType;
+        return "Object";
+    }
+
+    /// <summary>Returns true if <paramref name="ancestor"/> is somewhere up this object's parent chain.</summary>
+    public bool IsDescendantOf(SceneObject ancestor)
+    {
+        var current = Parent;
+        while (current != null)
+        {
+            if (current == ancestor) return true;
+            current = current.Parent;
+        }
+        return false;
+    }
+
+    // ── Legacy stub ──────────────────────────────────────────────────────────
     public List<Mesh> GetMeshInstancesRecursively(object visual)
     {
         return [];
