@@ -11,7 +11,7 @@ public static class Program
     /// </summary>
     public static BendStyle ProjectBendStyle { get; set; } = BendStyle.Blocky;
     
-    public static void Main()
+    private static void Main()
     {
         App = new App();
         App.Run();

@@ -11,6 +11,7 @@ using Numerics = System.Numerics;
 using MineImatorSimplyRemadeNuxi.core;
 using MineImatorSimplyRemadeNuxi.core.objs.nodes;
 using MineImatorSimplyRemadeNuxi.Gui;
+using MineImatorSimplyRemadeNuxi.mineImator;
 using MineImatorSimplyRemadeNuxi.ui;
 
 namespace MineImatorSimplyRemadeNuxi;
@@ -126,6 +127,21 @@ public class App : Game
             await ShowAssetDownloaderAndWait();
 
         base.Initialize();
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return;
+            using var legacySave = new LegacyV1Save();
+
+            var writeFile = legacySave.OpenFileWrite("D:\\Dev\\mineImators\\Mine-Imator 0.1\\file.dat");
+            legacySave.WriteByte(writeFile, 100);
+            legacySave.CloseFile(writeFile);
+
+            var readFile = legacySave.OpenFileRead("D:\\Dev\\mineImators\\Mine-Imator 0.1\\file.dat");
+            var b = legacySave.ReadByte(readFile);
+            legacySave.CloseFile(readFile);
+            Console.WriteLine(b);
+        }
     }
 
     protected override void LoadContent()

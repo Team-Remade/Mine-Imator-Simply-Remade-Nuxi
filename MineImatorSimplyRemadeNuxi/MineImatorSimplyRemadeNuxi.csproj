@@ -14,6 +14,9 @@
     <ItemGroup>
         <None Remove="Icon.ico" />
         <None Remove="Icon.bmp" />
+        <None Update="gmbinaryfile.dll">
+          <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="Icon.ico">
@@ -37,6 +40,46 @@
     <ItemGroup>
       <Folder Include="src\core\project\" />
     </ItemGroup>
+    <!-- Build the 32-bit wrapper and copy its full output into a subdirectory -->
+    <Target Name="BuildAndCopyGMBinaryWrapper" AfterTargets="Build">
+        <MSBuild Projects="..\GMBinaryWrapper\GMBinaryWrapper.csproj"
+                 Properties="Configuration=$(Configuration);TargetFramework=net9.0-windows"
+                 Targets="Restore;Build" />
+        <ItemGroup>
+            <WrapperFiles Include="..\GMBinaryWrapper\bin\$(Configuration)\net9.0-windows\win-x86\**\*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(WrapperFiles)"
+              DestinationFolder="$(OutputPath)GMBinaryWrapper\%(RecursiveDir)"
+              SkipUnchangedFiles="true" />
+    </Target>
+
+    <Target Name="BuildAndCopyGMBinaryWrapper" AfterTargets="Build">
+        <MSBuild Projects="..\GMBinaryWrapper\GMBinaryWrapper.csproj"
+                 Properties="Configuration=$(Configuration);TargetFramework=net9.0-windows"
+                 Targets="Restore;Build" />
+        <ItemGroup>
+            <WrapperFiles Include="..\GMBinaryWrapper\bin\$(Configuration)\net9.0-windows\win-x86\**\*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(WrapperFiles)"
+              DestinationFolder="$(OutputPath)GMBinaryWrapper\%(RecursiveDir)"
+              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="..\GMBinaryWrapper\gmbinaryfile.dll"
+              DestinationFolder="$(OutputPath)"
+              SkipUnchangedFiles="true" />
+    </Target>
+
+    <Target Name="PublishAndCopyGMBinaryWrapper" AfterTargets="Publish">
+        <MSBuild Projects="..\GMBinaryWrapper\GMBinaryWrapper.csproj"
+                 Properties="Configuration=$(Configuration);TargetFramework=net9.0-windows"
+                 Targets="Restore;Publish" />
+        <ItemGroup>
+            <WrapperPublishedFiles Include="..\GMBinaryWrapper\bin\$(Configuration)\net9.0-windows\win-x86\publish\**\*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(WrapperPublishedFiles)"
+              DestinationFolder="$(PublishDir)GMBinaryWrapper\%(RecursiveDir)"
+              SkipUnchangedFiles="true" />
+    </Target>
+
     <Target Name="CopyDataFolder" AfterTargets="Build">
         <ItemGroup>
             <DataFiles Include="data\**\*" />
