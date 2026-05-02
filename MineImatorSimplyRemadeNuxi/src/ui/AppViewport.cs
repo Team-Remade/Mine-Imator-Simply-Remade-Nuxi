@@ -120,6 +120,8 @@ public class AppViewport
 
     public void Update(GameTime gameTime)
     {
+        if (!Program.App.IsActive) return;
+        
         MouseState currentMouse = Mouse.GetState();
 
         // ── Right-button fly mode ─────────────────────────────────────────────
