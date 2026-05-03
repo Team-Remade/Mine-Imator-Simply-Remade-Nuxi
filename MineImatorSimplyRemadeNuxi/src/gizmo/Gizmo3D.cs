@@ -284,7 +284,7 @@ public class Gizmo3D
     public bool     Editing       { get; private set; }
     public bool     Hovering      { get; private set; }
     public bool     Visible       { get; private set; }
-    public bool     UseLocalSpace { get; set; }
+    public bool     UseLocalSpace { get; set; } = false;
     public float    Size          { get; set; } = 80.0f;
     public bool     ShowAxes      { get; set; } = true;
     public bool     ShowSelectionBox  { get; set; } = false;
@@ -1497,16 +1497,19 @@ public class Gizmo3D
                         break;
                     case TransformPlane.X:
                         localAxis = Vector3.UnitX;
+                        globalAxis = Vector3.UnitX;
                         break;
                     case TransformPlane.Y:
                         localAxis = Vector3.UnitY;
+                        globalAxis = Vector3.UnitY;
                         break;
                     case TransformPlane.Z:
                         localAxis = Vector3.UnitZ;
+                        globalAxis = Vector3.UnitZ;
                         break;
                 }
 
-                if (_edit.Plane != TransformPlane.View)
+                if (UseLocalSpace && _edit.Plane != TransformPlane.View)
                     globalAxis = Vector3.Normalize(GizmoMath.BasisTransform(_gizmoTransform.Basis, localAxis));
 
                 Vector3? ri = GizmoMath.PlaneIntersectsRay(planeNorm, planePt, rayPos, ray);
@@ -1702,11 +1705,20 @@ public class Gizmo3D
                 }
                 else
                 {
-                    Matrix blocal = original.Basis * Matrix.Invert(originalLocal.Basis);
-                    Vector3 axis  = GizmoMath.BasisTransform(blocal, motion);
-                    Matrix rot2   = GizmoMath.AxisAngle(axis.LengthSquared() > 1e-8f ? Vector3.Normalize(axis) : Vector3.Up, extra);
-                    Matrix newBasis = blocal * (rot2 * originalLocal.Basis);
-                    Vector3 newOrigin = GizmoMath.BasisTransform(rotMat, original.Origin - _edit.Center) + _edit.Center;
+                    Matrix rot2 = rotMat;
+                    Vector3 newOrigin = GizmoMath.BasisTransform(rot2, original.Origin - _edit.Center) + _edit.Center;
+                    Matrix worldRotatedBasis = original.Basis * rot2;
+                    Matrix newBasis;
+                    if (original.Basis == originalLocal.Basis)
+                    {
+                        newBasis = worldRotatedBasis;
+                    }
+                    else
+                    {
+                        Matrix localToWorld = original.Basis * Matrix.Invert(originalLocal.Basis);
+                        Matrix worldToLocal = Matrix.Invert(localToWorld);
+                        newBasis = worldRotatedBasis * worldToLocal * originalLocal.Basis;
+                    }
                     return new Transform3D(newBasis, newOrigin);
                 }
             }
@@ -1765,12 +1777,14 @@ public class Gizmo3D
     /// </summary>
     private static Transform3D GetWorldTransform(SceneObject obj)
     {
-        // World-space anchor: obj.Position transformed by the parent chain, no pivot offset.
         Vector3 worldOrigin = obj.GetWorldPosition();
 
-        // Basis: this object's own local rotation/scale only.
-        Matrix rot   = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
-        Matrix basis = Matrix.CreateScale(obj.Scale) * rot;
+        Matrix worldMatrix = obj.GetWorldMatrix();
+        Matrix basis = new(
+            worldMatrix.M11, worldMatrix.M12, worldMatrix.M13, 0,
+            worldMatrix.M21, worldMatrix.M22, worldMatrix.M23, 0,
+            worldMatrix.M31, worldMatrix.M32, worldMatrix.M33, 0,
+            0, 0, 0, 1);
 
         return new Transform3D(basis, worldOrigin);
     }
