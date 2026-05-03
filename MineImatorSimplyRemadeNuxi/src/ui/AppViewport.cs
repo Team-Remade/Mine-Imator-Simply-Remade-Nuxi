@@ -42,6 +42,7 @@ public class AppViewport
     // ── Gizmo ─────────────────────────────────────────────────────────────────
     private Gizmo3D _gizmo;
     private bool    _gizmoEditing;
+    private KeyboardState _prevKeyboard;
 
     /// <summary>Set by App after both objects are created.</summary>
     public SpawnMenu SpawnMenu { get; set; }
@@ -167,6 +168,13 @@ public class AppViewport
             var kb = Keyboard.GetState();
             _gizmo.Snapping  = kb.IsKeyDown(Keys.LeftControl) || kb.IsKeyDown(Keys.RightControl);
             _gizmo.ShiftSnap = kb.IsKeyDown(Keys.LeftShift)   || kb.IsKeyDown(Keys.RightShift);
+
+            if (kb.IsKeyDown(Keys.G) && !_prevKeyboard.IsKeyDown(Keys.G) &&
+                !_gizmoEditing && _gizmo.GetSelectedCount() > 0)
+            {
+                _gizmo.UseLocalSpace = !_gizmo.UseLocalSpace;
+            }
+            _prevKeyboard = kb;
         }
 
         // ── Left-button orbit drag (only when NOT in fly mode) ────────────────
