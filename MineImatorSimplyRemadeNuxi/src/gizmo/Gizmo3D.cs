@@ -17,7 +17,7 @@ namespace MineImatorSimplyRemadeNuxi.gizmo;
 /// </summary>
 public struct Transform3D
 {
-    public Matrix Basis;   // rotation / scale component
+    public Matrix Basis;   // stored in Godot column-major convention: columns = axes
     public Vector3 Origin; // translation
 
     public static readonly Transform3D Identity = new(Matrix.Identity, Vector3.Zero);
@@ -28,14 +28,10 @@ public struct Transform3D
         Origin  = origin;
     }
 
-    /// <summary>Row 0 of the basis (local X axis in world space).</summary>
-    public Vector3 BasisX => new(Basis.M11, Basis.M12, Basis.M13);
-    /// <summary>Row 1 of the basis (local Y axis in world space).</summary>
-    public Vector3 BasisY => new(Basis.M21, Basis.M22, Basis.M23);
-    /// <summary>Row 2 of the basis (local Z axis in world space).</summary>
-    public Vector3 BasisZ => new(Basis.M31, Basis.M32, Basis.M33);
+    public Vector3 BasisX => new(Basis.M11, Basis.M21, Basis.M31);
+    public Vector3 BasisY => new(Basis.M12, Basis.M22, Basis.M32);
+    public Vector3 BasisZ => new(Basis.M13, Basis.M23, Basis.M33);
 
-    /// <summary>Get basis axis by index (0=X, 1=Y, 2=Z).</summary>
     public Vector3 BasisColumn(int i) => i switch
     {
         0 => BasisX,
@@ -58,40 +54,36 @@ public struct Transform3D
         y = Vector3.Normalize(y - x * Vector3.Dot(x, y));
         Vector3 z = Vector3.Cross(x, y);
         Matrix m = Matrix.Identity;
-        m.M11 = x.X; m.M12 = x.Y; m.M13 = x.Z;
-        m.M21 = y.X; m.M22 = y.Y; m.M23 = y.Z;
-        m.M31 = z.X; m.M32 = z.Y; m.M33 = z.Z;
+        m.M11 = x.X; m.M21 = x.Y; m.M31 = x.Z;
+        m.M12 = y.X; m.M22 = y.Y; m.M32 = y.Z;
+        m.M13 = z.X; m.M23 = z.Y; m.M33 = z.Z;
         return new Transform3D(m, Origin);
     }
 
     public Transform3D ScaledBasis(Vector3 scale)
     {
         Matrix m = Basis;
-        m.M11 *= scale.X; m.M12 *= scale.X; m.M13 *= scale.X;
-        m.M21 *= scale.Y; m.M22 *= scale.Y; m.M23 *= scale.Y;
-        m.M31 *= scale.Z; m.M32 *= scale.Z; m.M33 *= scale.Z;
+        m.M11 *= scale.X; m.M21 *= scale.X; m.M31 *= scale.X;
+        m.M12 *= scale.Y; m.M22 *= scale.Y; m.M32 *= scale.Y;
+        m.M13 *= scale.Z; m.M23 *= scale.Z; m.M33 *= scale.Z;
         return new Transform3D(m, Origin);
     }
 
-    /// <summary>Translate in local space.</summary>
     public Transform3D TranslatedLocal(Vector3 localOffset)
     {
-        return new Transform3D(Basis, Origin + Vector3.Transform(localOffset, Basis));
+        return new Transform3D(Basis, Origin + GizmoMath.BasisTransform(Basis, localOffset));
     }
 
-    /// <summary>Translate in world space.</summary>
     public Transform3D Translated(Vector3 worldOffset)
     {
         return new Transform3D(Basis, Origin + worldOffset);
     }
 
-    /// <summary>Full 4×4 world matrix (for rendering).</summary>
     public Matrix ToMatrix4x4()
     {
-        Matrix m = Basis;
-        m.M14 = 0; m.M24 = 0; m.M34 = 0;
-        m.M41 = Origin.X; m.M42 = Origin.Y; m.M43 = Origin.Z; m.M44 = 1f;
-        return m;
+        Matrix xna = Matrix.Transpose(Basis);
+        xna.M41 = Origin.X; xna.M42 = Origin.Y; xna.M43 = Origin.Z; xna.M44 = 1f;
+        return xna;
     }
 }
 
@@ -191,16 +183,16 @@ internal static class GizmoMath
     /// </summary>
     public static Matrix ScaledOrthogonal(Matrix basis, Vector3 scale)
     {
-        Vector3 row0 = new(basis.M11, basis.M12, basis.M13);
-        Vector3 row1 = new(basis.M21, basis.M22, basis.M23);
-        Vector3 row2 = new(basis.M31, basis.M32, basis.M33);
+        Vector3 col0 = new(basis.M11, basis.M21, basis.M31);
+        Vector3 col1 = new(basis.M12, basis.M22, basis.M32);
+        Vector3 col2 = new(basis.M13, basis.M23, basis.M33);
 
         Vector3 s = new(-1, -1, -1);
         s.X += scale.X; s.Y += scale.Y; s.Z += scale.Z;
         bool sign = (s.X + s.Y + s.Z) < 0;
 
-        Vector3 bx = Vector3.Normalize(row0);
-        Vector3 by = row1;
+        Vector3 bx = Vector3.Normalize(col0);
+        Vector3 by = col1;
         by = Vector3.Normalize(by - bx * Vector3.Dot(bx, by));
         Vector3 bz = Vector3.Normalize(Vector3.Cross(bx, by));
 
@@ -210,16 +202,16 @@ internal static class GizmoMath
         s = new(sx, sy, sz);
 
         Vector3 dots = Vector3.Zero;
-        Vector3[] bRows = [bx, by, bz];
-        Vector3[] sRows = [row0, row1, row2];
+        Vector3[] bCols = [bx, by, bz];
+        Vector3[] sCols = [col0, col1, col2];
         for (int i = 0; i < 3; i++)
         {
             float sv = i == 0 ? s.X : i == 1 ? s.Y : s.Z;
             for (int j = 0; j < 3; j++)
             {
                 float dot = Vector3.Dot(
-                    Vector3.Normalize(sRows[i]),
-                    bRows[j]);
+                    Vector3.Normalize(sCols[i]),
+                    bCols[j]);
                 if (j == 0) dots.X += sv * MathF.Abs(dot);
                 else if (j == 1) dots.Y += sv * MathF.Abs(dot);
                 else dots.Z += sv * MathF.Abs(dot);
@@ -230,9 +222,9 @@ internal static class GizmoMath
 
         Vector3 newScale = Vector3.One + dots;
         Matrix result = basis;
-        result.M11 *= newScale.X; result.M12 *= newScale.X; result.M13 *= newScale.X;
-        result.M21 *= newScale.Y; result.M22 *= newScale.Y; result.M23 *= newScale.Y;
-        result.M31 *= newScale.Z; result.M32 *= newScale.Z; result.M33 *= newScale.Z;
+        result.M11 *= newScale.X; result.M21 *= newScale.X; result.M31 *= newScale.X;
+        result.M12 *= newScale.Y; result.M22 *= newScale.Y; result.M32 *= newScale.Y;
+        result.M13 *= newScale.Z; result.M23 *= newScale.Z; result.M33 *= newScale.Z;
         return result;
     }
 }
@@ -1614,7 +1606,7 @@ public class Gizmo3D
             }
             else if (_edit.Mode == TransformMode.Rotate)
             {
-                obj.SetLocalRotation(MatrixToEulerYXZ(newTransform.Basis));
+                obj.SetLocalRotation(MatrixToEulerYXZ(Matrix.Transpose(newTransform.Basis)));
             }
             else if (_edit.Mode == TransformMode.Scale)
             {
@@ -1649,9 +1641,9 @@ public class Gizmo3D
                 {
                     Matrix newBasis = originalLocal.Basis;
                     Vector3 scaleVec = motion + Vector3.One;
-                    newBasis.M11 *= scaleVec.X; newBasis.M12 *= scaleVec.X; newBasis.M13 *= scaleVec.X;
-                    newBasis.M21 *= scaleVec.Y; newBasis.M22 *= scaleVec.Y; newBasis.M23 *= scaleVec.Y;
-                    newBasis.M31 *= scaleVec.Z; newBasis.M32 *= scaleVec.Z; newBasis.M33 *= scaleVec.Z;
+                    newBasis.M11 *= scaleVec.X; newBasis.M21 *= scaleVec.X; newBasis.M31 *= scaleVec.X;
+                    newBasis.M12 *= scaleVec.Y; newBasis.M22 *= scaleVec.Y; newBasis.M32 *= scaleVec.Y;
+                    newBasis.M13 *= scaleVec.Z; newBasis.M23 *= scaleVec.Z; newBasis.M33 *= scaleVec.Z;
                     s = new Transform3D(newBasis, originalLocal.Origin);
                 }
                 else
@@ -1669,9 +1661,9 @@ public class Gizmo3D
                         newBasis = GizmoMath.ScaledOrthogonal(newBasis, sv);
                     else
                     {
-                        newBasis.M11 *= sv.X; newBasis.M12 *= sv.X; newBasis.M13 *= sv.X;
-                        newBasis.M21 *= sv.Y; newBasis.M22 *= sv.Y; newBasis.M23 *= sv.Y;
-                        newBasis.M31 *= sv.Z; newBasis.M32 *= sv.Z; newBasis.M33 *= sv.Z;
+                        newBasis.M11 *= sv.X; newBasis.M21 *= sv.X; newBasis.M31 *= sv.X;
+                        newBasis.M12 *= sv.Y; newBasis.M22 *= sv.Y; newBasis.M32 *= sv.Y;
+                        newBasis.M13 *= sv.Z; newBasis.M23 *= sv.Z; newBasis.M33 *= sv.Z;
                     }
                     s = new Transform3D(newBasis, newOrigin);
                 }
@@ -1691,25 +1683,26 @@ public class Gizmo3D
                 Matrix rotMat = GizmoMath.AxisAngle(motion.LengthSquared() > 1e-8f ? Vector3.Normalize(motion) : Vector3.Up, extra);
                 if (local)
                 {
-                    Vector3 axis = GizmoMath.BasisTransform(originalLocal.Basis, motion);
-                    Matrix  rot2 = GizmoMath.AxisAngle(axis.LengthSquared() > 1e-8f ? Vector3.Normalize(axis) : Vector3.Up, extra);
-                    return new Transform3D(rot2 * originalLocal.Basis, originalLocal.Origin);
+                    Matrix xnaBasis = Matrix.Transpose(originalLocal.Basis);
+                    Matrix xnaRotated = rotMat * xnaBasis;
+                    return new Transform3D(Matrix.Transpose(xnaRotated), originalLocal.Origin);
                 }
                 else
                 {
                     Matrix rot2 = rotMat;
                     Vector3 newOrigin = GizmoMath.BasisTransform(rot2, original.Origin - _edit.Center) + _edit.Center;
-                    Matrix worldRotatedBasis = original.Basis * rot2;
-                    Matrix newBasis;
-                    if (original.Basis == originalLocal.Basis)
+
+                    Matrix xnaBasis = Matrix.Transpose(original.Basis);
+                    Matrix xnaRotated = rot2 * xnaBasis;
+                    Matrix newBasis = Matrix.Transpose(xnaRotated);
+
+                    if (original.Basis != originalLocal.Basis)
                     {
-                        newBasis = worldRotatedBasis;
-                    }
-                    else
-                    {
-                        Matrix localToWorld = original.Basis * Matrix.Invert(originalLocal.Basis);
-                        Matrix worldToLocal = Matrix.Invert(localToWorld);
-                        newBasis = worldRotatedBasis * worldToLocal * originalLocal.Basis;
+                        Matrix xnaLocalBasis = Matrix.Transpose(originalLocal.Basis);
+                        Matrix localToWorldXna = xnaBasis * Matrix.Invert(xnaLocalBasis);
+                        Matrix worldToLocalXna = Matrix.Invert(localToWorldXna);
+                        Matrix xnaResult = xnaRotated * worldToLocalXna * xnaLocalBasis;
+                        newBasis = Matrix.Transpose(xnaResult);
                     }
                     return new Transform3D(newBasis, newOrigin);
                 }
@@ -1771,33 +1764,28 @@ public class Gizmo3D
     {
         Vector3 worldOrigin = obj.GetWorldPosition();
 
-        if (obj.Parent == null)
+        Matrix rot   = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
+        Matrix basis = Matrix.Transpose(rot) * Matrix.CreateScale(obj.Scale);
+
+        if (obj.Parent != null)
         {
-            Matrix rot   = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
-            Matrix basis = rot * Matrix.CreateScale(obj.Scale);
-            return new Transform3D(basis, worldOrigin);
+            Matrix parentWorld = obj.Parent.GetWorldMatrix();
+            Matrix parentBasis = new(
+                parentWorld.M11, parentWorld.M12, parentWorld.M13, 0,
+                parentWorld.M21, parentWorld.M22, parentWorld.M23, 0,
+                parentWorld.M31, parentWorld.M32, parentWorld.M33, 0,
+                0, 0, 0, 1);
+            parentBasis = Matrix.Transpose(parentBasis);
+            basis = basis * parentBasis;
         }
 
-        Matrix parentWorld = obj.Parent.GetWorldMatrix();
-        Matrix parentBasis = new(
-            parentWorld.M11, parentWorld.M12, parentWorld.M13, 0,
-            parentWorld.M21, parentWorld.M22, parentWorld.M23, 0,
-            parentWorld.M31, parentWorld.M32, parentWorld.M33, 0,
-            0, 0, 0, 1);
-
-        Matrix localRot   = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
-        Matrix localBasis = localRot * Matrix.CreateScale(obj.Scale);
-        Matrix worldBasis = localBasis * parentBasis;
-
-        return new Transform3D(worldBasis, worldOrigin);
+        return new Transform3D(basis, worldOrigin);
     }
 
     private static Transform3D GetLocalTransform(SceneObject obj)
     {
-        // Local transform (in parent space) – used as the pre-drag snapshot for
-        // ComputeTransform; its Origin is obj.Position (local), not world position.
         Matrix rot   = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
-        Matrix basis = rot * Matrix.CreateScale(obj.Scale);
+        Matrix basis = Matrix.Transpose(rot) * Matrix.CreateScale(obj.Scale);
         return new Transform3D(basis, obj.Position);
     }
 
@@ -1961,8 +1949,8 @@ public class Gizmo3D
     private static Vector3 ExtractScale(Matrix m)
     {
         return new Vector3(
-            new Vector3(m.M11, m.M12, m.M13).Length(),
-            new Vector3(m.M21, m.M22, m.M23).Length(),
-            new Vector3(m.M31, m.M32, m.M33).Length());
+            new Vector3(m.M11, m.M21, m.M31).Length(),
+            new Vector3(m.M12, m.M22, m.M32).Length(),
+            new Vector3(m.M13, m.M23, m.M33).Length());
     }
 }
