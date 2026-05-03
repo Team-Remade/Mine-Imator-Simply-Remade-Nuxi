@@ -1593,16 +1593,18 @@ public class Gizmo3D
 
             if (_edit.Mode == TransformMode.Translate)
             {
-                // newTransform.Origin is a world-space position because TargetGlobal.Origin
-                // is world-space.  Convert back to local space by subtracting the parent's
-                // world translation (captured at drag-start in TargetOriginal vs TargetGlobal).
-                // localOffset = worldResult - (worldOrigin - localOrigin)
-                //             = worldResult - worldOrigin + localOrigin
-                Vector3 worldOrigin = item.TargetGlobal.Origin;
-                Vector3 localOrigin = item.TargetOriginal.Origin;
                 Vector3 newWorldPos = newTransform.Origin;
-                Vector3 localPos    = localOrigin + (newWorldPos - worldOrigin);
-                obj.SetLocalPosition(localPos);
+
+                if (obj.Parent != null)
+                {
+                    Matrix parentTransform = obj.GetParentWorldTransform();
+                    Matrix parentInverse = Matrix.Invert(parentTransform);
+                    obj.SetLocalPosition(Vector3.Transform(newWorldPos, parentInverse));
+                }
+                else
+                {
+                    obj.SetLocalPosition(newWorldPos);
+                }
             }
             else if (_edit.Mode == TransformMode.Rotate)
             {
@@ -1674,7 +1676,7 @@ public class Gizmo3D
             {
                 if (Snapping) motion = GizmoMath.Snapped(motion, extra);
                 if (local)
-                    return originalLocal.TranslatedLocal(motion);
+                    return original.TranslatedLocal(motion);
                 return original.Translated(motion);
             }
 
@@ -1769,7 +1771,7 @@ public class Gizmo3D
 
         if (obj.Parent != null)
         {
-            Matrix parentWorld = obj.Parent.GetWorldMatrix();
+            Matrix parentWorld = obj.GetParentWorldTransform();
             Matrix parentBasis = new(
                 parentWorld.M11, parentWorld.M12, parentWorld.M13, 0,
                 parentWorld.M21, parentWorld.M22, parentWorld.M23, 0,

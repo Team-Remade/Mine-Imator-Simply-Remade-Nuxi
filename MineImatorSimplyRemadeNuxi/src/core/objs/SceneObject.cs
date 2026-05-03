@@ -579,8 +579,46 @@ public class SceneObject
         if (Parent == null)
             return Position;
 
-        // Transform the local Position point through the parent's world matrix.
-        return Vector3.Transform(Position, Parent.GetWorldMatrix());
+        // Use the same parent transform as GetWorldMatrix() so the world position
+        // is consistent with the rendered position.
+        Matrix parentTransform = GetParentWorldTransform();
+        return Vector3.Transform(Position, parentTransform);
+    }
+
+    public Matrix GetParentWorldTransform()
+    {
+        if (Parent == null)
+            return Matrix.Identity;
+
+        Matrix parentWorld = Parent.GetWorldMatrix();
+
+        if (InheritPivotOffset)
+            return parentWorld;
+
+        // Decompose and reconstruct the parent matrix without its pivot offset,
+        // matching the logic in GetWorldMatrix().
+        parentWorld.Decompose(out Vector3 parentScale, out Quaternion parentRot, out Vector3 parentTranslation);
+        parentTranslation += Parent._pivotOffset;
+
+        Matrix result = Matrix.Identity;
+        if (InheritScale)
+            result = Matrix.CreateScale(parentScale) * result;
+        if (InheritRotation)
+            result = Matrix.CreateFromQuaternion(parentRot) * result;
+        if (InheritPosition)
+            result = result * Matrix.CreateTranslation(parentTranslation);
+        return result;
+    }
+
+    public Matrix GetWorldMatrixNoPivot()
+    {
+        var rotation = Matrix.CreateFromYawPitchRoll(Rotation.Y, Rotation.X, Rotation.Z);
+        var localNoPivot = Matrix.CreateScale(Scale) * rotation * Matrix.CreateTranslation(Position);
+
+        if (Parent == null)
+            return localNoPivot;
+
+        return localNoPivot * Parent.GetWorldMatrix();
     }
 
     /// <summary>
@@ -595,7 +633,7 @@ public class SceneObject
 
         Matrix parentWorld = Parent.GetWorldMatrix();
 
-        if (InheritPosition && InheritRotation && InheritScale)
+        if (InheritPosition && InheritRotation && InheritScale && InheritPivotOffset)
         {
             // Full inheritance: local matrix applied on top of parent's world matrix.
             return GetLocalMatrix() * parentWorld;
@@ -604,6 +642,11 @@ public class SceneObject
         // Partial inheritance: decompose what we need from the parent world matrix.
         // We reconstruct a partial parent matrix using only the selected components.
         parentWorld.Decompose(out Vector3 parentScale, out Quaternion parentRot, out Vector3 parentTranslation);
+
+        // When InheritPivotOffset is false, subtract the parent's pivot offset from
+        // the decomposed translation so the child is not displaced by it.
+        if (!InheritPivotOffset)
+            parentTranslation += Parent._pivotOffset;
 
         Matrix parentPartial = Matrix.Identity;
 
