@@ -1596,7 +1596,7 @@ public class Gizmo3D
                 motion, snap, localCoords,
                 _edit.Plane != TransformPlane.View);
 
-            // Write back to SceneObject
+            // Write back to SceneObject.
             // NOTE: TargetGlobal / TargetOriginal are intentionally NOT updated here;
             // they hold the pre-drag snapshot captured in ComputeEdit so that every
             // ContinueEdit frame recomputes from the same origin rather than accumulating.
@@ -1604,7 +1604,16 @@ public class Gizmo3D
 
             if (_edit.Mode == TransformMode.Translate)
             {
-                obj.SetLocalPosition(newTransform.Origin);
+                // newTransform.Origin is a world-space position because TargetGlobal.Origin
+                // is world-space.  Convert back to local space by subtracting the parent's
+                // world translation (captured at drag-start in TargetOriginal vs TargetGlobal).
+                // localOffset = worldResult - (worldOrigin - localOrigin)
+                //             = worldResult - worldOrigin + localOrigin
+                Vector3 worldOrigin = item.TargetGlobal.Origin;
+                Vector3 localOrigin = item.TargetOriginal.Origin;
+                Vector3 newWorldPos = newTransform.Origin;
+                Vector3 localPos    = localOrigin + (newWorldPos - worldOrigin);
+                obj.SetLocalPosition(localPos);
             }
             else if (_edit.Mode == TransformMode.Rotate)
             {
@@ -1622,7 +1631,7 @@ public class Gizmo3D
         {
             Vector3 liveCenter = Vector3.Zero;
             foreach (var s in _selections)
-                liveCenter += s.Object.Position;
+                liveCenter += s.Object.GetWorldPosition();
             _visualCenter = liveCenter / _selections.Count;
         }
 
@@ -1748,20 +1757,31 @@ public class Gizmo3D
     // SceneObject transform helpers
     // ─────────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Returns a Transform3D whose <see cref="Transform3D.Origin"/> is the object's
+    /// true world-space position (the gizmo/rotation anchor, excluding pivot offset),
+    /// and whose <see cref="Transform3D.Basis"/> is the object's local rotation/scale.
+    /// Used for gizmo visual placement; drag write-back uses <see cref="GetLocalTransform"/>.
+    /// </summary>
     private static Transform3D GetWorldTransform(SceneObject obj)
     {
-        Matrix rot = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
+        // World-space anchor: obj.Position transformed by the parent chain, no pivot offset.
+        Vector3 worldOrigin = obj.GetWorldPosition();
+
+        // Basis: this object's own local rotation/scale only.
+        Matrix rot   = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
         Matrix basis = Matrix.CreateScale(obj.Scale) * rot;
-        // The rotation/pivot point lives at obj.Position in world space;
-        // the visual is offset from it by -PivotOffset (scaled & rotated),
-        // so the gizmo should sit at Position, not at the mesh centre.
-        return new Transform3D(basis, obj.Position);
+
+        return new Transform3D(basis, worldOrigin);
     }
 
     private static Transform3D GetLocalTransform(SceneObject obj)
     {
-        // Same as world for now (no hierarchy traversal needed for gizmo purposes)
-        return GetWorldTransform(obj);
+        // Local transform (in parent space) – used as the pre-drag snapshot for
+        // ComputeTransform; its Origin is obj.Position (local), not world position.
+        Matrix rot   = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
+        Matrix basis = Matrix.CreateScale(obj.Scale) * rot;
+        return new Transform3D(basis, obj.Position);
     }
 
     private static (Vector3 pos, Vector3 size) GetObjectAabb(SceneObject obj)

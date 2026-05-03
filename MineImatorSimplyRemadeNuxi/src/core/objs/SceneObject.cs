@@ -552,6 +552,73 @@ public class SceneObject
             child.ApplyEffectiveVisibility();
     }
 
+    // ── World transform ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Builds the local TRS matrix for this object (pivot + scale + rotation + position).
+    /// This is the object's transform in its parent's space (or world space if it has no parent).
+    /// The pivot offset is baked in so meshes rotate/scale around the correct centre.
+    /// </summary>
+    public Matrix GetLocalMatrix()
+    {
+        var rotation = Matrix.CreateFromYawPitchRoll(Rotation.Y, Rotation.X, Rotation.Z);
+        return Matrix.CreateTranslation(-_pivotOffset) *
+               Matrix.CreateScale(Scale) *
+               rotation *
+               Matrix.CreateTranslation(Position);
+    }
+
+    /// <summary>
+    /// Returns the world-space coordinates of this object's <see cref="Position"/> point
+    /// (i.e. the rotation/gizmo anchor), without any pivot-offset displacement.
+    /// For a root object this equals <see cref="Position"/>; for a child it is
+    /// <see cref="Position"/> transformed by the parent's world matrix.
+    /// </summary>
+    public Vector3 GetWorldPosition()
+    {
+        if (Parent == null)
+            return Position;
+
+        // Transform the local Position point through the parent's world matrix.
+        return Vector3.Transform(Position, Parent.GetWorldMatrix());
+    }
+
+    /// <summary>
+    /// Returns the world-space matrix for this object, accumulating parent transforms
+    /// up the hierarchy and respecting <see cref="InheritPosition"/>,
+    /// <see cref="InheritRotation"/>, and <see cref="InheritScale"/> flags.
+    /// </summary>
+    public Matrix GetWorldMatrix()
+    {
+        if (Parent == null)
+            return GetLocalMatrix();
+
+        Matrix parentWorld = Parent.GetWorldMatrix();
+
+        if (InheritPosition && InheritRotation && InheritScale)
+        {
+            // Full inheritance: local matrix applied on top of parent's world matrix.
+            return GetLocalMatrix() * parentWorld;
+        }
+
+        // Partial inheritance: decompose what we need from the parent world matrix.
+        // We reconstruct a partial parent matrix using only the selected components.
+        parentWorld.Decompose(out Vector3 parentScale, out Quaternion parentRot, out Vector3 parentTranslation);
+
+        Matrix parentPartial = Matrix.Identity;
+
+        if (InheritScale)
+            parentPartial = Matrix.CreateScale(parentScale) * parentPartial;
+
+        if (InheritRotation)
+            parentPartial = Matrix.CreateFromQuaternion(parentRot) * parentPartial;
+
+        if (InheritPosition)
+            parentPartial = parentPartial * Matrix.CreateTranslation(parentTranslation);
+
+        return GetLocalMatrix() * parentPartial;
+    }
+
     // ── Pivot helpers ─────────────────────────────────────────────────────────
 
     /// <summary>

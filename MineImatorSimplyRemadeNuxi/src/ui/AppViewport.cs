@@ -352,12 +352,7 @@ public class AppViewport
         {
             if (obj.GetEffectiveVisibility() && obj.Visuals.Count > 0)
             {
-                var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
-                basicEffect.World =
-                    Matrix.CreateTranslation(-obj.PivotOffset) *
-                    Matrix.CreateScale(obj.Scale) *
-                    rotation *
-                    Matrix.CreateTranslation(obj.Position);
+                basicEffect.World = obj.GetWorldMatrix();
 
                 foreach (var mesh in obj.Visuals)
                     mesh.Render(graphicsDevice, basicEffect);
@@ -376,12 +371,7 @@ public class AppViewport
             if (obj.IsSelectable && obj.Visuals.Count > 0)
             {
                 // Build the same world transform as the normal render pass
-                var rotation = Matrix.CreateFromYawPitchRoll(obj.Rotation.Y, obj.Rotation.X, obj.Rotation.Z);
-                var world =
-                    Matrix.CreateTranslation(-obj.PivotOffset) *
-                    Matrix.CreateScale(obj.Scale) *
-                    rotation *
-                    Matrix.CreateTranslation(obj.Position);
+                var world = obj.GetWorldMatrix();
 
                 _pickEffect.Parameters["World"]?.SetValue(world);
                 _pickEffect.Parameters["pick_color"]?.SetValue(obj.PickColor);
