@@ -37,6 +37,18 @@
 /processorParam:TextureFormat=Color
 /build:assets/img/chegg.png;assets/img/chegg
 
+#begin assets/img/SKULL.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:assets/img/SKULL.png
+
 #begin assets/img/tamari.png
 /importer:TextureImporter
 /processor:TextureProcessor

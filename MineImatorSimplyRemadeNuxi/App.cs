@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using FFMpegCore;
@@ -7,32 +8,23 @@ using FFMpegCore.Extensions.Downloader;
 using Hexa.NET.ImGui;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using Numerics = System.Numerics;
 using MineImatorSimplyRemadeNuxi.core;
+using MineImatorSimplyRemadeNuxi.core.dialogBox;
 using MineImatorSimplyRemadeNuxi.core.objs.nodes;
 using MineImatorSimplyRemadeNuxi.Gui;
 using MineImatorSimplyRemadeNuxi.mineImator;
 using MineImatorSimplyRemadeNuxi.ui;
+using SDL2;
 
 namespace MineImatorSimplyRemadeNuxi;
 
 public class App : Game
 {
-    [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern void SDL_SetWindowIcon(IntPtr window, IntPtr icon);
-
-    [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern IntPtr SDL_CreateRGBSurfaceFrom(IntPtr pixels, int width, int height, int depth, int pitch,
-        uint rmask, uint gmask, uint bmask, uint amask);
-
-    [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern void SDL_FreeSurface(IntPtr surface);
-
-    [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern void SDL_MaximizeWindow(IntPtr window);
+    public DialogBox MessageBox;
 
     private GraphicsDeviceManager _graphics;
-    private SpriteBatch _spriteBatch;
     public static ImGuiRenderer GuiRenderer;
 
     private static readonly string
@@ -48,6 +40,8 @@ public class App : Game
     public PropertiesPanel Properties;
     Timeline _timeline;
     private SpawnMenu _spawnMenu;
+
+    public static LegacyV1Save LegacySave;
 
     // Performance optimization
     private int _fpsUpdateCounter = 0;
@@ -82,7 +76,7 @@ public class App : Game
         }
 
         GuiRenderer = new ImGuiRenderer(this);
-        ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+        ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable | ImGuiConfigFlags.ViewportsEnable;
 
         SelectionManager.Initialize();
 
@@ -134,18 +128,18 @@ public class App : Game
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            return;
-            using var legacySave = new LegacyV1Save();
+            LegacySave = new LegacyV1Save();
             
+            return;
             File.Create(Path.Combine(GetUserDataPath(), ApplicationLocalDirectory)).Close();
 
             //var writeFile = legacySave.OpenFileWrite("D:\\Dev\\mineImators\\Mine-Imator 0.1\\file.dat");
             //legacySave.WriteByte(writeFile, 100);
             //legacySave.CloseFile(writeFile);
 
-            var readFile = legacySave.OpenFileRead("D:\\Dev\\mineImators\\Mine-Imator 0.1\\bruh.mani");
-            var a = legacySave.ReadByte(readFile);
-            var chars = legacySave.ReadByte(readFile);
+            var readFile = LegacySave.OpenFileRead("D:\\Dev\\mineImators\\Mine-Imator 0.1\\bruh.mani");
+            var a = LegacySave.ReadByte(readFile);
+            var chars = LegacySave.ReadByte(readFile);
 
             string text = "";
 
@@ -156,12 +150,12 @@ public class App : Game
             
             for (int c = 0; c < chars; c++)
             {
-                var charName = legacySave.ReadString(readFile);
-                var charSkin = legacySave.ReadShort(readFile);
-                var charVis = legacySave.ReadByte(readFile);
-                var charModel = legacySave.ReadByte(readFile);
-                var charCol = legacySave.ReadInt(readFile);
-                var posAmount = legacySave.ReadShort(readFile);
+                var charName = LegacySave.ReadString(readFile);
+                var charSkin = LegacySave.ReadShort(readFile);
+                var charVis = LegacySave.ReadByte(readFile);
+                var charModel = LegacySave.ReadByte(readFile);
+                var charCol = LegacySave.ReadInt(readFile);
+                var posAmount = LegacySave.ReadShort(readFile);
 
                 Console.WriteLine();
 
@@ -182,27 +176,102 @@ public class App : Game
                     Console.WriteLine();
                     Console.WriteLine($"Pos: {z}");
                     text += $"Pos: {z}" + "\n";
-                    var posePos = legacySave.ReadShort(readFile);
-                    var poseTransition = legacySave.ReadByte(readFile);
+                    var posePos = LegacySave.ReadShort(readFile);
+                    var poseTransition = LegacySave.ReadByte(readFile);
 
-                    Console.WriteLine($"Pose Pos: {posePos}");
+                    Console.WriteLine($"Pose Frame: {posePos}");
                     Console.WriteLine($"Pose Transition: {poseTransition}");
-                    text += $"Pose Pos: {posePos}" + "\n";
+                    text += $"Pose Frame: {posePos}" + "\n";
                     text += "Pose Transition: " + poseTransition + "\n";
 
-                    for (int r = 0; r < 60; r++)
+                    for (int r = 0; r < 64; r++)
                     {
                         Console.WriteLine();
                         Console.WriteLine($"R: {r}");
-                        text += $"R: {r}" + "\n";
-                        var bruh = legacySave.ReadDouble(readFile);
+
+                        if (r < 8)
+                        {
+                            text += $"Root: {r}" + "\n";
+                        }
+
+                        else if (r < 16)
+                        {
+                            text += $"Body: {r}" + "\n";
+                        }
+
+                        else if (r < 24)
+                        {
+                            text += $"Right Arm: {r}" + "\n";
+                        }
+                        
+                        else if (r < 32)
+                        {
+                            text += $"Left Arm: {r}" + "\n";
+                        }
+                        
+                        else if (r < 40)
+                        {
+                            text += $"Right Leg: {r}" + "\n";
+                        }
+                        
+                        else if (r < 48)
+                        {
+                            text += $"Left Leg: {r}" + "\n";
+                        }
+
+                        else if (r < 56)
+                        {
+                            text += $"Head: {r}" + "\n";
+                        }
+
+                        else
+                        {
+                            text += $"Hat: {r}" + "\n";
+                        }
+                        
+                        var bruh = LegacySave.ReadDouble(readFile);
+                        if (r % 8 == 0)
+                        {
+                            text += "Alpha: " + bruh + "\n";
+                        }
+                        else if (r % 8 == 1)
+                        {
+                            text += "Scale: " + bruh + "\n";
+                        }
+                        else if (r % 8 == 2)
+                        {
+                            text += "Position X: " + bruh + "\n";
+                        }
+                        else if (r % 8 == 3)
+                        {
+                            text += "Position Y: " + bruh + "\n";
+                        }
+                        else if (r % 8 == 4)
+                        {
+                            text += "Position Z: " + bruh + "\n";
+                        }
+                        else if (r % 8 == 5)
+                        {
+                            text += "Rotation X: " + bruh + "\n";
+                        }
+                        else if (r % 8 == 6)
+                        {
+                            text += "Rotation Y: " + bruh + "\n";
+                        }
+                        else if (r % 8 == 7)
+                        {
+                            text += "Rotation Z: " + bruh + "\n";
+                        }
+                        else
+                        {
+                            text += "Bruh: " + bruh + "\n";
+                        }
                         Console.WriteLine($"Bruh: {bruh}");
-                        text += "Bruh: " + bruh + "\n";
                     }
                 }
             }
 
-            var b = legacySave.ReadShort(readFile);
+            var b = LegacySave.ReadShort(readFile);
 
             Console.WriteLine();
             Console.WriteLine($"Skin thing: {b}");
@@ -212,13 +281,13 @@ public class App : Game
                 Console.WriteLine();
                 Console.WriteLine($"B: {i}");
                 text += "B: " + i + "\n";
-                var cr = legacySave.ReadString(readFile);
+                var cr = LegacySave.ReadString(readFile);
                 Console.WriteLine($"Cr: {cr}");
                 text += "Cr: " + cr + "\n";
             }
 
-            var bgselect = legacySave.ReadShort(readFile);
-            var br = legacySave.ReadShort(readFile);
+            var bgselect = LegacySave.ReadShort(readFile);
+            var br = LegacySave.ReadShort(readFile);
 
             Console.WriteLine();
             Console.WriteLine($"Bg select: {bgselect}");
@@ -232,14 +301,14 @@ public class App : Game
                 Console.WriteLine();
                 Console.WriteLine($"B: {i}");
                 text += "B: " + i + "\n";
-                var cr = legacySave.ReadString(readFile);
+                var cr = LegacySave.ReadString(readFile);
                 Console.WriteLine($"Cr: {cr}");
                 text += "Cr: " + cr + "\n";
             }
 
-            var bgshow = legacySave.ReadByte(readFile);
-            var bgstretch = legacySave.ReadByte(readFile);
-            var bgcolor = legacySave.ReadInt(readFile);
+            var bgshow = LegacySave.ReadByte(readFile);
+            var bgstretch = LegacySave.ReadByte(readFile);
+            var bgcolor = LegacySave.ReadInt(readFile);
 
             Console.WriteLine();
             Console.WriteLine($"Bg show: {bgshow}");
@@ -252,8 +321,8 @@ public class App : Game
 
             //gridshow skipped
 
-            var lightsEnabled = legacySave.ReadByte(readFile);
-            var lightsAmount = legacySave.ReadShort(readFile);
+            var lightsEnabled = LegacySave.ReadByte(readFile);
+            var lightsAmount = LegacySave.ReadShort(readFile);
 
             Console.WriteLine();
             Console.WriteLine($"Lights enabled: {lightsEnabled}");
@@ -265,11 +334,11 @@ public class App : Game
             {
                 Console.WriteLine();
                 Console.WriteLine($"L: {i}");
-                var lightX = legacySave.ReadShort(readFile);
-                var lightY = legacySave.ReadShort(readFile);
-                var lightZ = legacySave.ReadShort(readFile);
-                var lightR = legacySave.ReadShort(readFile);
-                var lightC = legacySave.ReadShort(readFile);
+                var lightX = LegacySave.ReadShort(readFile);
+                var lightY = LegacySave.ReadShort(readFile);
+                var lightZ = LegacySave.ReadShort(readFile);
+                var lightR = LegacySave.ReadShort(readFile);
+                var lightC = LegacySave.ReadShort(readFile);
 
                 Console.WriteLine($"L X: {lightX}");
                 Console.WriteLine($"L Y: {lightY}");
@@ -284,8 +353,8 @@ public class App : Game
                 text += "L C: " + lightC + "\n";
             }
 
-            var tempo = legacySave.ReadByte(readFile);
-            var loop = legacySave.ReadByte(readFile);
+            var tempo = LegacySave.ReadByte(readFile);
+            var loop = LegacySave.ReadByte(readFile);
             Console.WriteLine();
             Console.WriteLine($"tempo: {tempo}");
             Console.WriteLine($"loop: {loop}");
@@ -295,19 +364,25 @@ public class App : Game
             
             File.WriteAllText(Path.Combine(GetUserDataPath(), ApplicationLocalDirectory), text);
 
-            legacySave.CloseFile(readFile);
-            Console.WriteLine(a);
+            LegacySave.CloseFile(readFile);
         }
     }
 
     protected override void LoadContent()
     {
-        _spriteBatch = new SpriteBatch(GraphicsDevice);
+        
     }
 
     protected override void Update(GameTime gameTime)
     {
         Viewport.Update(gameTime);
+        
+        var k = Keyboard.GetState();
+
+        if (k.IsKeyDown(Keys.L))
+        {
+            MessageBox = new DialogBox("Bruh", "Test Dialog");
+        }
 
         base.Update(gameTime);
     }
@@ -358,7 +433,31 @@ public class App : Game
         _timeline.Render();
         _spawnMenu.Render();
 
+        if (MessageBox != null)
+        {
+            MessageBox.Draw();
+        }
+
         GuiRenderer.AfterLayout();
+    }
+    
+    public IntPtr GetOpenGLContext(GraphicsDevice device)
+    {
+        // 1. Get the 'PlatformStrategy' from the GraphicsDevice
+        var platformStrategyProperty = typeof(GraphicsDevice).GetProperty("Strategy", BindingFlags.NonPublic | BindingFlags.Instance);
+        var strategy = platformStrategyProperty.GetValue(device);
+
+        // 2. Get the OpenGL Context from the Strategy
+        // In DesktopGL, the strategy is 'ConcreteGraphicsDevice'
+        var contextField = strategy.GetType().GetField("_context", BindingFlags.NonPublic | BindingFlags.Instance);
+        var context = contextField.GetValue(strategy);
+
+        // 3. The context object itself contains the Handle (IntPtr)
+        // It's usually a private 'IntPtr' or a wrapper object with a 'Handle' property
+        var handleField = context.GetType().GetField("Handle", BindingFlags.NonPublic | BindingFlags.Instance) 
+                          ?? context.GetType().GetField("handle", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        return (IntPtr)handleField.GetValue(context);
     }
 
     private void SetWindowIcon(Texture2D texture)
@@ -376,12 +475,12 @@ public class App : Game
         {
             fixed (byte* ptr = pixels)
             {
-                IntPtr surface = SDL_CreateRGBSurfaceFrom((IntPtr)ptr, texture.Width, texture.Height, 32,
+                IntPtr surface = SDL.SDL_CreateRGBSurfaceFrom((IntPtr)ptr, texture.Width, texture.Height, 32,
                     texture.Width * 4, rmask, gmask, bmask, amask);
                 if (surface != IntPtr.Zero)
                 {
-                    SDL_SetWindowIcon(Window.Handle, surface);
-                    SDL_FreeSurface(surface);
+                    SDL.SDL_SetWindowIcon(Window.Handle, surface);
+                    SDL.SDL_FreeSurface(surface);
                 }
             }
         }
@@ -458,6 +557,17 @@ public class App : Game
             //CloseFFmpegLoadingWindow();
             Console.WriteLine($"Failed to ensure FFMpeg: {ex.Message}");
         }
+    }
+
+    protected override void OnExiting(object sender, ExitingEventArgs args)
+    {
+        if (LegacySave != null)
+        {
+            LegacySave.Dispose();
+            LegacySave = null;
+        }
+
+        base.OnExiting(sender, args);
     }
 
     private async Task ShowAssetDownloaderAndWait()
