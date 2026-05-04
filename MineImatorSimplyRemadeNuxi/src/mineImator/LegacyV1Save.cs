@@ -5,6 +5,7 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using MineImatorSimplyRemadeNuxi.core.dialogBox;
 
 namespace MineImatorSimplyRemadeNuxi.mineImator;
 
@@ -169,8 +170,13 @@ public class LegacyV1Save : IDisposable
     public LegacyV1Save()
     {
         _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-        if (!_isWindows) return;
-
+        if (!_isWindows)
+        {
+            Program.App.MessageBox =
+                new DialogBox("OS Invalid for Operation", "The Legacy Save format only works on Windows");
+            return;
+        }
+        
         if (!TryConnect())
             StartWrapper();
     }
